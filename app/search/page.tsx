@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState, type FormEvent } from "react";
 import { searchShows } from "@/src/data/catalog/client";
 import type { CatalogShow } from "@/src/data/catalog/types";
 import { isSaved, saveShow, unsaveShow } from "@/src/data/repos/savedShowsRepo";
@@ -59,16 +59,26 @@ export default function SearchPage() {
 }
 
 function ShowRow({ show }: { show: CatalogShow }) {
-  const [saved, setSaved] = useState(() => isSaved(show.id));
+  const queryClient = useQueryClient();
+  const [saved, setSaved] = useState(false);
 
-  // ONE_CLICK invariant: a single click saves or unsaves.
+  useEffect(() => {
+    let cancelled = false;
+    void isSaved(show.id).then((v) => {
+      if (!cancelled) setSaved(v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [show.id]);
+
+  // ONE_CLICK invariant: a single click saves or unsaves (optimistic).
   function toggleSave() {
-    if (saved) {
-      unsaveShow(show.id);
-    } else {
-      saveShow(show);
-    }
-    setSaved(!saved);
+    const next = !saved;
+    setSaved(next);
+    void (next ? saveShow(show) : unsaveShow(show.id)).then(() =>
+      queryClient.invalidateQueries({ queryKey: ["saved"] }),
+    );
   }
 
   return (
