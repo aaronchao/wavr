@@ -58,6 +58,12 @@ export type CatalogShowResponse = {
 };
 
 export type SimilarShow = CatalogShow & { why: string };
+
+/** Response of /api/catalog/top-picks — curated, ranked top to bottom. */
+export type TopPicksResponse = {
+  picks: SimilarShow[];
+  degraded: boolean;
+};
 export type SimilarEpisode = CatalogEpisode & { why: string };
 
 /** Response of /api/catalog/similar — ranked top to bottom. */

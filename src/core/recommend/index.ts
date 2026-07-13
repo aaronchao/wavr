@@ -19,8 +19,12 @@ export { tasteVector } from "./taste";
 export { cosine, scoreCandidate, DEFAULT_RATING_WEIGHT } from "./score";
 export { cluster, SEED_CLUSTERS, seedVectors } from "./cluster";
 export { diversify } from "./diversify";
-export { rankSimilar, queryTermsForShow } from "./similar";
+export { rankSimilar, queryTermsForShow, qualityOf } from "./similar";
 export type { SimilarItemInput, RankedSimilar } from "./similar";
+export { buzzScore, buzzWhy } from "./buzz";
+export type { BuzzInput } from "./buzz";
+export { topPicks } from "./topPicks";
+export type { TopPick, TopPicksInput } from "./topPicks";
 
 export type RecommendInput = {
   /** Shows to rank (from catalog search / trending / seeds). */

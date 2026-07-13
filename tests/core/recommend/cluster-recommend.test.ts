@@ -34,15 +34,34 @@ describe("cluster", () => {
   });
 
   it("labels highly rated discoveries with the rating source", () => {
-    const item = { ...scored("c-highlyrated"), rating: { source: "douban", rating: 9.2 } };
-    const clusters = cluster([item]);
+    // a show off every seed topic, so the rating rung gets its turn
+    const offSeed = {
+      show: {
+        id: "c-knitting",
+        title: "Pure Knitting",
+        description: "Yarn patterns and needlework chat.",
+        categories: ["Hobbies"],
+      },
+      vector: vectorizeShow(
+        {
+          id: "c-knitting",
+          title: "Pure Knitting",
+          description: "Yarn patterns and needlework chat.",
+          categories: ["Hobbies"],
+        },
+        idf,
+      ),
+      score: 1,
+      rating: { source: "douban", rating: 9.2 },
+    };
+    const clusters = cluster([offSeed]);
     expect(clusters[0].why).toBe("Highly rated on Douban");
   });
 
-  it("falls back to the top category", () => {
+  it("assigns music shows to the generic music-culture seed", () => {
     const clusters = cluster([scored("c-zane")]);
-    expect(clusters[0].label).toBe("Music");
-    expect(clusters[0].why).toBe("More Music");
+    expect(clusters[0].label).toBe("music culture");
+    expect(clusters[0].why).toBe("More music culture");
   });
 });
 

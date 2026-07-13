@@ -8,7 +8,7 @@ import { useSession } from "@/src/state/useSession";
 import { Card, Chip, CoverTile } from "@/src/ui";
 import { useRecommendations } from "@/src/features/explore/useRecommendations";
 
-const EXTRA_TOPICS = ["music culture", "commentary", "business & coaching"];
+const EXTRA_TOPICS: string[] = []; // generics now live in SEED_CLUSTERS
 
 export default function TopicsPage() {
   const { session } = useSession();

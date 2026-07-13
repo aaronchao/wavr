@@ -123,29 +123,63 @@ export async function itunesEpisodeSearch(
 
 const CHART_REVALIDATE_SECONDS = 6 * 60 * 60; // charts move slowly
 
-/**
- * Apple's top-podcasts chart (free RSS, no key). Returns collectionId ->
- * 1-based chart rank, or null when unreachable — a popularity proxy,
- * since real listen counts aren't public on any free API.
- */
-export async function itunesTopChartRanks(): Promise<Map<string, number> | null> {
+type ChartEntry = {
+  id?: string;
+  name?: string;
+  artistName?: string;
+  url?: string;
+  artworkUrl100?: string;
+  genres?: { name?: string }[];
+};
+
+async function fetchTopChart(): Promise<ChartEntry[] | null> {
   try {
     const res = await fetch(
       "https://rss.marketingtools.apple.com/api/v2/us/podcasts/top/100/podcasts.json",
       { next: { revalidate: CHART_REVALIDATE_SECONDS } },
     );
     if (!res.ok) return null;
-    const json = (await res.json()) as {
-      feed?: { results?: { id?: string }[] };
-    };
-    const ranks = new Map<string, number>();
-    (json.feed?.results ?? []).forEach((entry, i) => {
-      if (entry.id) ranks.set(String(entry.id), i + 1);
-    });
-    return ranks;
+    const json = (await res.json()) as { feed?: { results?: ChartEntry[] } };
+    return json.feed?.results ?? [];
   } catch {
     return null;
   }
+}
+
+/**
+ * Apple's top-podcasts chart (free RSS, no key). Returns collectionId ->
+ * 1-based chart rank, or null when unreachable — a popularity proxy,
+ * since real listen counts aren't public on any free API.
+ */
+export async function itunesTopChartRanks(): Promise<Map<string, number> | null> {
+  const entries = await fetchTopChart();
+  if (entries === null) return null;
+  const ranks = new Map<string, number>();
+  entries.forEach((entry, i) => {
+    if (entry.id) ranks.set(String(entry.id), i + 1);
+  });
+  return ranks;
+}
+
+/** The same chart as candidate shows (chart ids are iTunes collection ids). */
+export async function itunesTopChartShows(): Promise<CatalogShow[] | null> {
+  const entries = await fetchTopChart();
+  if (entries === null) return null;
+  return entries
+    .filter((e): e is ChartEntry & { id: string; name: string } =>
+      Boolean(e.id && e.name),
+    )
+    .map((e) => ({
+      id: String(e.id),
+      source: "itunes" as const,
+      title: e.name,
+      author: e.artistName ?? "",
+      coverUrl: e.artworkUrl100,
+      appleUrl: e.url,
+      categories: (e.genres ?? [])
+        .map((g) => g.name ?? "")
+        .filter((g) => g && g !== "Podcasts"),
+    }));
 }
 
 type PiFeed = {

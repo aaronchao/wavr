@@ -5,6 +5,7 @@ import type {
   PreviewEpisode,
   PreviewResponse,
   SimilarResponse,
+  TopPicksResponse,
 } from "./types";
 
 /** Browser-side typed client for /api/catalog/*. Failures degrade, never throw. */
@@ -38,6 +39,17 @@ export async function getPreviewEpisodes(id: string): Promise<PreviewEpisode[]> 
     return json.episodes ?? [];
   } catch {
     return [];
+  }
+}
+
+export async function getTopPicks(seedIds: string[]): Promise<TopPicksResponse> {
+  try {
+    const seeds = encodeURIComponent(seedIds.slice(0, 4).join(","));
+    const res = await fetch(`/api/catalog/top-picks?seeds=${seeds}`);
+    if (!res.ok) return { picks: [], degraded: true };
+    return (await res.json()) as TopPicksResponse;
+  } catch {
+    return { picks: [], degraded: true };
   }
 }
 

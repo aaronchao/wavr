@@ -32,7 +32,11 @@ export function toShowInput(show: CatalogShow): ShowInput {
  * engine itself runs locally per Section 8.7.
  */
 async function fetchCandidates(interests: string[]): Promise<CatalogShow[]> {
-  const queries = interests.length > 0 ? interests : SEED_CLUSTERS.map((s) => s.label);
+  // cold start: search only the first (personal) seeds, not every generic tag
+  const queries =
+    interests.length > 0
+      ? interests
+      : SEED_CLUSTERS.slice(0, 8).map((s) => s.label);
   const results = await Promise.all(queries.map((q) => searchShows(q)));
   const byId = new Map<string, CatalogShow>();
   for (const r of results) {

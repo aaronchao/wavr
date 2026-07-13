@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSimilar } from "@/src/data/catalog/client";
 import type { SimilarEpisode, SimilarShow } from "@/src/data/catalog/types";
+import {
+  isEpisodeSaved,
+  removeEpisode,
+  saveEpisode,
+} from "@/src/data/repos/savedEpisodesRepo";
 import { isSaved, saveShow, unsaveShow } from "@/src/data/repos/savedShowsRepo";
 import { previewEpisode, previewShow } from "@/src/features/player/preview";
 import { Card, Chip, CoverTile, SettleIn } from "@/src/ui";
@@ -158,6 +163,28 @@ function SimilarEpisodeRow({
   episode: SimilarEpisode;
   rank: number;
 }) {
+  const queryClient = useQueryClient();
+  const [queued, setQueued] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void isEpisodeSaved(episode.id).then((v) => {
+      if (!cancelled) setQueued(v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [episode.id]);
+
+  // ONE_CLICK invariant: a single click queues for listen-later.
+  function toggleLater() {
+    const next = !queued;
+    setQueued(next);
+    void (next ? saveEpisode(episode) : removeEpisode(episode.id)).then(() =>
+      queryClient.invalidateQueries({ queryKey: ["savedEpisodes"] }),
+    );
+  }
+
   return (
     <li>
       <SettleIn>
@@ -190,6 +217,16 @@ function SimilarEpisodeRow({
             )}
             <p className="truncate text-xs text-zinc-400">▶ {episode.why}</p>
           </div>
+          <Chip
+            active={queued}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleLater();
+            }}
+            className="shrink-0"
+          >
+            {queued ? "Queued ✓" : "+ Later"}
+          </Chip>
           {episode.appleUrl ? (
             <a
               href={episode.appleUrl}

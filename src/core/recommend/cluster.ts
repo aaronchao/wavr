@@ -3,7 +3,7 @@ import { tokenize } from "./tokenize";
 import { l2Normalize } from "./vectorize";
 import type { Cluster, ScoredCandidate, ShowInput, SparseVector } from "./types";
 
-/** Cold-start seed clusters (Section 8.6). */
+/** Cold-start seed clusters (Section 8.6) + generic exploration topics. */
 export const SEED_CLUSTERS: { id: string; label: string; seedText: string }[] = [
   {
     id: "asian-gay",
@@ -30,6 +30,68 @@ export const SEED_CLUSTERS: { id: string; label: string; seedText: string }[] = 
     id: "books",
     label: "book discussions",
     seedText: "book books reading literature author novel discussion club 读书",
+  },
+  // generic tags so Topics works for any taste, not just the seeds above
+  {
+    id: "news-politics",
+    label: "news & politics",
+    seedText: "news politics current events commentary analysis daily 新闻 时事",
+  },
+  {
+    id: "comedy",
+    label: "comedy",
+    seedText: "comedy funny humor improv laugh stand-up jokes 喜剧 搞笑",
+  },
+  {
+    id: "true-crime",
+    label: "true crime",
+    seedText: "true crime murder investigation detective mystery case 悬疑 罪案",
+  },
+  {
+    id: "technology",
+    label: "technology",
+    seedText: "technology tech software ai internet startup gadgets 科技",
+  },
+  {
+    id: "business",
+    label: "business & finance",
+    seedText:
+      "business finance money investing economics entrepreneur coaching leadership 商业 投资",
+  },
+  {
+    id: "health",
+    label: "health & wellness",
+    seedText: "health wellness fitness nutrition sleep meditation mindfulness 健康",
+  },
+  {
+    id: "history",
+    label: "history",
+    seedText: "history historical ancient war civilization empire 历史",
+  },
+  {
+    id: "science",
+    label: "science",
+    seedText: "science physics biology space astronomy research discoveries 科学",
+  },
+  {
+    id: "music-culture",
+    label: "music culture",
+    seedText: "music culture artists albums hip hop rock interviews 音乐",
+  },
+  {
+    id: "film-tv",
+    label: "film & TV",
+    seedText: "film movies cinema tv television series review criticism 电影 影视",
+  },
+  {
+    id: "food",
+    label: "food & cooking",
+    seedText: "food cooking recipes restaurants chef eating cuisine 美食",
+  },
+  {
+    id: "sports",
+    label: "sports",
+    seedText: "sports football basketball soccer nba training games 体育",
   },
 ];
 

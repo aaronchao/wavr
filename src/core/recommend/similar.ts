@@ -1,3 +1,4 @@
+import { buzzScore, buzzWhy, type BuzzInput } from "./buzz";
 import { cosine } from "./score";
 import { buildIdf, termWeights, vectorizeShow } from "./vectorize";
 import type { ShowInput } from "./types";
@@ -26,6 +27,8 @@ export type SimilarItemInput = {
   /** External rating 0..10 (Douban/Xiaoyuzhou), if cached. */
   rating?: number;
   ratingSource?: string;
+  /** Quality-discussion counts (Reddit / xyzrank / 小宇宙), if gathered. */
+  buzz?: BuzzInput;
 };
 
 export type RankedSimilar = {
@@ -110,7 +113,31 @@ function metrics(item: SimilarItemInput, now: Date): Metric[] {
           : null,
     });
   }
+  const buzz = buzzScore(item.buzz);
+  if (buzz !== null) {
+    out.push({ key: "buzz", value: buzz, phrase: buzzWhy(item.buzz) });
+  }
   return out;
+}
+
+/**
+ * Blended 0..1 quality/popularity from whichever metrics are present
+ * (null when none), plus the strongest human phrase. Shared by
+ * rankSimilar and topPicks.
+ */
+export function qualityOf(
+  item: SimilarItemInput,
+  now: Date,
+): { quality: number | null; phrase: string | null } {
+  const m = metrics(item, now);
+  if (m.length === 0) return { quality: null, phrase: null };
+  const best = m
+    .filter((x) => x.phrase !== null)
+    .sort((a, b) => b.value - a.value || a.key.localeCompare(b.key))[0];
+  return {
+    quality: m.reduce((s, x) => s + x.value, 0) / m.length,
+    phrase: best?.phrase ?? null,
+  };
 }
 
 function similarityPhrase(similarity: number): string {

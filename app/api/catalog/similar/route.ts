@@ -4,6 +4,7 @@ import {
   rankSimilar,
   type SimilarItemInput,
 } from "@/src/core/recommend";
+import { xyzrankBuzz } from "@/src/data/buzz/xyzrank";
 import { lookupShowEnriched } from "@/src/data/catalog/lookup";
 import {
   itunesEpisodeSearch,
@@ -60,16 +61,20 @@ export async function GET(request: Request) {
     if (!showById.has(s.id)) showById.set(s.id, s);
   }
 
-  const showCandidates: SimilarItemInput[] = [...showById.values()].map((s) => ({
-    id: s.id,
-    title: s.title,
-    description: s.description,
-    categories: s.categories,
-    lastEpisodeAt: s.lastEpisodeAt,
-    episodeCount: s.episodeCount,
-    chartRank: chartRanks?.get(s.id),
-    trendRank: trendRanks?.get(s.id),
-  }));
+  // 中文播客榜 buzz is one cached index fetch — cheap enough for all
+  const showCandidates: SimilarItemInput[] = await Promise.all(
+    [...showById.values()].map(async (s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      categories: s.categories,
+      lastEpisodeAt: s.lastEpisodeAt,
+      episodeCount: s.episodeCount,
+      chartRank: chartRanks?.get(s.id),
+      trendRank: trendRanks?.get(s.id),
+      buzz: (await xyzrankBuzz(s.title)) ?? undefined,
+    })),
+  );
 
   const episodeById = new Map<string, CatalogEpisode>();
   for (const e of episodeResults ?? []) {

@@ -43,6 +43,9 @@ export default function RootLayout({
               <Link href="/topics" className="hover:text-zinc-900 dark:hover:text-zinc-100">
                 Topics
               </Link>
+              <Link href="/library" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+                Library
+              </Link>
               <Link href="/settings" className="hover:text-zinc-900 dark:hover:text-zinc-100">
                 Settings
               </Link>
