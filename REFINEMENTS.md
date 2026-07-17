@@ -25,9 +25,9 @@ Last updated: 2026-07-13.
   `PODCAST_INDEX_API_KEY` / `PODCAST_INDEX_API_SECRET`) in Vercel →
   Production, then redeploy. Until set, those signal providers silently
   no-op.
-- [ ] **P1 — Supabase migration.** Run `supabase/migrations/002_collections.sql`
-  in the SQL editor so the Library's listen-later queue syncs across
-  devices instead of living in localStorage.
+- [x] **P1 — Supabase migration.** ~~Run `002_collections.sql`~~ Applied
+  2026-07-13 via MCP (`saved_episodes` live with RLS; advisors clean on
+  it). Listen-later now syncs for signed-in users.
 - [ ] **P2 — `wavr.is-a.dev` custom domain.** PR to `is-a-dev/register`
   with `domains/wavr.json` (CNAME → `cname.vercel-dns.com`) and
   `domains/_vercel.wavr.json` (TXT `vc-domain-verify=…`). Domain already
@@ -95,10 +95,12 @@ Last updated: 2026-07-13.
 
 ## 3. Collection, playback & sync
 
-- [ ] **P1 — Preview clips need HTTP Range.** Random-offset clips rely on
-  the podcast CDN honoring Range requests. CDNs that don't will play from
-  0:00. Detect (probe `Accept-Ranges` / a short range) and, when absent,
-  either pick offset 0 gracefully or show "preview from start".
+- [x] **P1 — Preview clips need HTTP Range.** Done 2026-07-13. The 30s
+  window is now anchored to the *actual* playback position (via the
+  `seeked` event, gated so a pre-seek `timeupdate` can't anchor early), so
+  a Range-capable CDN plays the random offset and a no-Range CDN plays a
+  clean 0:00–0:30 clip labelled "30s preview from the start". Verified in
+  headless Chromium against both a Range-serving and a no-Range fixture.
 - [ ] **P2 — Auto-track listen progress from previews.** `saved_episodes`
   has `status` + `position_sec`, but only the manual "Done?" toggle writes
   them. Wire the preview player to mark an episode `in_progress` and record
@@ -161,10 +163,15 @@ Last updated: 2026-07-13.
 
 ## 7. Infrastructure & ops
 
-- [ ] **P2 — Check Supabase security advisors.** Run the advisors and
-  confirm RLS on all user tables (`saved_shows`, `engagement`, `prefs`,
-  `saved_episodes`); `shows` / `ratings_cache` are intentionally shared
-  read caches.
+- [x] **P2 — Check Supabase security advisors.** Ran 2026-07-13. All user
+  tables (`saved_shows`, `engagement`, `prefs`, `saved_episodes`) have
+  correct owner-scoped RLS. Follow-up below.
+- [ ] **P3 — Tighten `shows` catalog-cache writes.** Advisors flag the
+  `shows` INSERT/UPDATE policies as `with check (true)` — intentional (any
+  signed-in user upserts catalog metadata), but it means a user could
+  overwrite a cached show's title/art. If abuse ever matters, move catalog
+  writes server-side (service role) and drop the authenticated write
+  policies. (Leaked-password advisor is moot — auth is magic-link only.)
 - [ ] **P3 — Lightweight, privacy-respecting analytics.** We have no
   visibility into whether discovery is *working* (saves per session, "not
   for me" rate, preview→open funnel). A minimal first-party events table
@@ -185,6 +192,12 @@ sharing, snapshot capture, native apps. See GitHub issues #8–#15.
 
 ## Changelog of shipped refinements
 
+- 2026-07-13 — Preview clips now robust to CDNs without HTTP Range: the
+  30s window anchors to actual playback start, so no-Range feeds play a
+  clean 0:00 clip ("from the start") and Range feeds keep the random
+  offset. Fixed a pre-seek anchor race found during verification.
+- 2026-07-13 — Applied the `saved_episodes` migration and audited Supabase
+  security advisors (RLS clean on all user tables).
 - 2026-07-13 — Fixed first-run Home crash (unguarded `.length`) and
   hardened `/api/catalog/*` client parsers to coerce malformed bodies.
 - 2026-07-13 — Trending/mainstream topics now lead the pickers; personal
