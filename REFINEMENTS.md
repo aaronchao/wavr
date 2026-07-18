@@ -44,11 +44,11 @@ Last updated: 2026-07-13.
   unit-tested) strips punctuation, drops podcast/radio/fm/播客/电台
   suffixes + a dangling article, preserves CJK; wired into xyzrank,
   listennotes, xiaoyuzhou matching.
-- [ ] **P2 — Weight tuning is untested against real taste.** The
-  `0.7 similarity / 0.3 popularity` (similar) and `0.55 / 0.45` (top
-  picks) splits, plus buzz sub-weights, are reasoned guesses. Once there's
-  real engagement data, revisit — ideally behind a small config object so
-  it's one place to change.
+- [x] **P2 — Weights now live in one config.** Done 2026-07-17.
+  `src/core/recommend/weights.ts` centralizes the feed/similar/topPicks
+  weights (values unchanged; tests confirm no behavior drift). Tuning is
+  now a one-file edit. Still open: revisit the actual values once there's
+  real engagement data.
 - [ ] **P2 — Blocked shows still cost candidate slots.** `recommend()`
   filters blocked/saved after fetching; a heavily-blocked user gets a
   thinner feed. Consider over-fetching candidates proportional to the
@@ -176,10 +176,10 @@ Last updated: 2026-07-13.
   to a committed `e2e/` suite (stubbed `/api/*`, Range-serving audio
   fixture) and run on PRs via a GitHub Actions workflow (see the
   `session-start-hook` skill for the web-session setup).
-- [ ] **P2 — Data-layer tests.** Only `/src/core` is unit-tested. Add
-  fetch-mocked tests for the catalog server mappers and buzz providers
-  (shape parsing, null-on-failure, refresh-on-401) — the parts most likely
-  to drift with upstream APIs.
+- [x] **P2 — Data-layer tests (buzz providers).** Done 2026-07-17.
+  `tests/data/buzz-providers.test.ts` fetch-mocks Listen Notes, xyzrank,
+  小宇宙 (incl. refresh-first), and Reddit: happy-path parse + null-on-
+  failure. Catalog server mappers still uncovered — follow-up.
 - [ ] **P3 — Golden recommendation fixtures.** Snapshot the ranked output
   for a fixed engagement + candidate set so weight/scoring changes show a
   visible, reviewable diff.
