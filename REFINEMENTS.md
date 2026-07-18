@@ -171,11 +171,12 @@ Last updated: 2026-07-13.
 
 ## 6. Testing & CI
 
-- [ ] **P1 — Commit the E2E checks + run them in CI.** The Playwright flows
-  used to verify each batch live in a scratchpad, not the repo. Port them
-  to a committed `e2e/` suite (stubbed `/api/*`, Range-serving audio
-  fixture) and run on PRs via a GitHub Actions workflow (see the
-  `session-start-hook` skill for the web-session setup).
+- [x] **P1 (partial) — CI safety net.** Done 2026-07-17.
+  `.github/workflows/ci.yml` runs typecheck + lint + unit tests + build on
+  every push/PR — the deterministic checks that would have caught the
+  regressions we hit. **Remaining:** port the Playwright flows from the
+  scratchpad into a committed `e2e/` suite and add a browser job (needs
+  `@playwright/test` + `npx playwright install chromium` in CI).
 - [x] **P2 — Data-layer tests (buzz providers).** Done 2026-07-17.
   `tests/data/buzz-providers.test.ts` fetch-mocks Listen Notes, xyzrank,
   小宇宙 (incl. refresh-first), and Reddit: happy-path parse + null-on-
