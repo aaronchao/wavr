@@ -64,37 +64,42 @@ Last updated: 2026-07-13.
 
 ## 2. Data sources & signals
 
-> **Live signal audit — 2026-07-17.** Tested the key-gated providers with
-> real credentials from the Mac (not the sandbox):
-> - **小宇宙 direct token:** access **and** refresh tokens both return
->   `401` from the `openresty` gateway. The tokens are almost certainly
->   device-bound to the ultrazg/xyz session that minted them (our
->   hardcoded `x-jike-device-id` doesn't match) and/or the gateway needs
->   request-signing we don't do. **Verdict: not usable as-is.** Redundant
->   anyway — xyzrank already supplies 小宇宙 data free.
-> - **Listen Notes:** key returns `401` on the production host — the key
->   isn't accepted (test-only key, unactivated, or mis-copied). Needs a
->   valid FREE-tier production key, or drop the provider.
-> - **Working, no auth needed:** Apple charts, 中文播客榜 (xyzrank),
->   episode recency/count, Douban ratings. These carry the quality signal
->   today. Reddit still unverified on Vercel (see below).
+> **Live signal audit — 2026-07-17 (corrected).** Tested the key-gated
+> providers with the **literal** credentials from the Mac:
+> - **Listen Notes:** real key → **HTTP 200**. Valid and working. ✅
+> - **小宇宙:** literal refresh token → **HTTP 200**, minting a fresh
+>   access token — which exercises exactly the server's refresh path
+>   (`/app_auth_tokens.refresh` with `x-jike-device-id: wavr-personal`,
+>   confirming the device-id is NOT a binding blocker). Access-then-refresh
+>   flow works. ✅
+> - **Working, no auth:** Apple charts, 中文播客榜 (xyzrank), episode
+>   recency/count, Douban. Reddit still unverified on Vercel (below).
 >
-> Net: the app's ranking/buzz works on the free no-auth sources; the
-> key-gated providers are optional bonuses that are currently no-ops
-> (silently skipped — no bug, no error).
+> **Correction:** earlier 401s were a *test artifact*, not bad
+> credentials. `vercel env pull` masks Sensitive values as the literal
+> string `[SENSITIVE]`, so `source .env.prod` set every var to
+> `[SENSITIVE]` and we were sending that as the token/key. The values
+> stored in Vercel (entered verbatim in the dashboard) and read by the
+> app via `process.env` are unaffected. Production very likely works for
+> both providers; definitive confirmation needs a prod-side check (runtime
+> logs or the live app), since the pulled file can't reveal the stored
+> value.
 
 - [ ] **P1 — Reddit blocks datacenter IPs.** `reddit.com/search.json`
   frequently 403s from Vercel's IPs, so the Reddit buzz signal may be
   quietly absent in production. Verify in prod; if blocked, either drop it
   or route through a lightweight allowed proxy / use the OAuth app API.
-- [ ] **P1 — 小宇宙 direct token confirmed non-functional (see audit).**
-  Both tokens 401 at the gateway. Options: (a) **recommended** — drop the
-  direct-token provider entirely and rely on xyzrank; (b) match the
-  device-id + request-signing ultrazg/xyz uses and re-mint tokens. Until
-  decided, remove the stale `XIAOYUZHOU_*` env vars so they don't mislead.
-- [ ] **P1 — Listen Notes key rejected (401, see audit).** Either obtain a
-  valid free-tier production key and re-add `LISTEN_NOTES_API_KEY`, or drop
-  `listenNotesBuzz`. The Listen Score is nice-to-have, not load-bearing.
+- [ ] **P2 — Confirm 小宇宙 + Listen Notes resolve in prod.** Credentials
+  proven valid (2026-07-17). Confirm the deployed functions actually
+  return data — read Vercel runtime logs for `xiaoyuzhouBuzz` /
+  `listenNotesBuzz`, or hit a prod `/api/catalog/similar` and look for a
+  Listen-Score / 小宇宙 "why". If a stored value was truncated on entry,
+  re-paste it in the dashboard (paste is mangle-proof; the CLI/`source`
+  path is not).
+- [ ] **P2 — Make 小宇宙 refresh-first.** `xiaoyuzhouBuzz` returns null if
+  `XIAOYUZHOU_ACCESS_TOKEN` is unset, even when a valid refresh token
+  exists. Refresh up front when only the refresh token is present, so a
+  stale/missing access token isn't a hard requirement.
 - [ ] **P2 — Token refresh doesn't persist.** The refreshed 小宇宙 access
   token is cached in module memory, so it's lost on each serverless cold
   start (re-refresh every time). Consider stashing the latest access token
@@ -213,11 +218,11 @@ sharing, snapshot capture, native apps. See GitHub issues #8–#15.
 
 ## Changelog of shipped refinements
 
-- 2026-07-17 — Live signal audit (see §2): 小宇宙 tokens and Listen Notes
-  key both return 401 against their live APIs. Documented; the app's
-  ranking runs on the free no-auth sources (Apple charts, xyzrank, Douban)
-  and silently skips the key-gated ones. Env vars set in Vercel Production
-  (Supabase migration also applied + advisors clean).
+- 2026-07-17 — Live signal audit (see §2): **credentials confirmed valid**
+  — Listen Notes key and 小宇宙 refresh token both return 200 against their
+  live APIs (earlier 401s were a `[SENSITIVE]`-masking test artifact, now
+  corrected). 小宇宙 refresh path verified end to end. Env vars set in
+  Vercel Production; Supabase migration applied + advisors clean.
 - 2026-07-13 — Preview clips now robust to CDNs without HTTP Range: the
   30s window anchors to actual playback start, so no-Range feeds play a
   clean 0:00 clip ("from the start") and Range feeds keep the random
