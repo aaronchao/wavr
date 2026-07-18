@@ -172,12 +172,12 @@ Last updated: 2026-07-13.
 
 ## 6. Testing & CI
 
-- [x] **P1 (partial) — CI safety net.** Done 2026-07-17.
-  `.github/workflows/ci.yml` runs typecheck + lint + unit tests + build on
-  every push/PR — the deterministic checks that would have caught the
-  regressions we hit. **Remaining:** port the Playwright flows from the
-  scratchpad into a committed `e2e/` suite and add a browser job (needs
-  `@playwright/test` + `npx playwright install chromium` in CI).
+- [x] **P1 — CI safety net + committed E2E.** Done 2026-07-17.
+  `.github/workflows/ci.yml` runs typecheck + lint + unit tests + build,
+  plus a browser job running `e2e/smoke.spec.ts` (`@playwright/test`):
+  live search, trending topics, custom-interest settings, queue→library,
+  and degraded-Top-Picks. All `/api/*` stubbed at the browser boundary, so
+  CI needs no external network. Locally: `PW_EXECUTABLE_PATH=/opt/pw-browsers/chromium npm run e2e`.
 - [x] **P2 — Data-layer tests (buzz providers).** Done 2026-07-17.
   `tests/data/buzz-providers.test.ts` fetch-mocks Listen Notes, xyzrank,
   小宇宙 (incl. refresh-first), and Reddit: happy-path parse + null-on-

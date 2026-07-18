@@ -1,0 +1,86 @@
+import { test, expect, type Page } from "@playwright/test";
+
+/** Shared catalog stubs — the catch-all is registered first so the
+ *  specific routes below take precedence (Playwright matches newest-first). */
+const show = (id: string, title: string, author: string, cats: string[], extra = {}) => ({
+  id,
+  source: "itunes",
+  title,
+  author,
+  appleUrl: `https://podcasts.apple.com/us/podcast/id${id}`,
+  categories: cats,
+  ...extra,
+});
+
+const SEARCH = {
+  shows: [show("222", "Psychology In Seattle", "Kirk Honda", ["Mental Health"])],
+  degraded: false,
+};
+const SIMILAR = {
+  shows: [],
+  episodes: [
+    {
+      id: "e1",
+      title: "Ep 12: Attachment styles",
+      showId: "222",
+      showTitle: "Psychology In Seattle",
+      categories: [],
+      appleUrl: "https://podcasts.apple.com/ep12",
+      why: "Similar topics · New this week",
+    },
+  ],
+  degraded: false,
+};
+
+async function stub(page: Page, over: { topPicks?: unknown } = {}) {
+  await page.route("**/api/**", (r) => r.fulfill({ json: {} }));
+  await page.route("**/api/catalog/search**", (r) => r.fulfill({ json: SEARCH }));
+  await page.route("**/api/catalog/similar**", (r) => r.fulfill({ json: SIMILAR }));
+  await page.route("**/api/catalog/preview**", (r) => r.fulfill({ json: { episodes: [] } }));
+  await page.route("**/api/catalog/top-picks**", (r) =>
+    r.fulfill({ json: over.topPicks ?? { picks: [], degraded: true } }),
+  );
+}
+
+test("live search shows results and a 'More like' section without a click", async ({ page }) => {
+  await stub(page);
+  await page.goto("/search");
+  await page.fill("input", "Psychology");
+  await expect(page.getByText("Psychology In Seattle").first()).toBeVisible();
+  await expect(page.getByText("More like Psychology In Seattle")).toBeVisible();
+});
+
+test("topics lead with trending; personal niche seeds are absent", async ({ page }) => {
+  await stub(page);
+  await page.goto("/topics");
+  await expect(page.getByText("true crime", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText("Asian gay podcasts")).toHaveCount(0);
+});
+
+test("settings offers custom interests, no personal seeds", async ({ page }) => {
+  await stub(page);
+  await page.goto("/settings");
+  await expect(page.getByPlaceholder(/Add an interest/)).toBeVisible();
+  await expect(page.getByText("Asian gay podcasts")).toHaveCount(0);
+});
+
+test("queue an episode for later, then it appears in the Library", async ({ page }) => {
+  await stub(page);
+  await page.goto("/search");
+  await page.fill("input", "Psychology");
+  await page.getByText("More like Psychology In Seattle").waitFor();
+  await page.getByRole("button", { name: /Episodes \(1\)/ }).click();
+  await page.getByRole("button", { name: "+ Later", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Queued ✓", exact: true })).toBeVisible();
+
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Listen later" }).click();
+  await expect(page.getByText("Ep 12: Attachment styles")).toBeVisible();
+});
+
+test("degraded Top Picks hides the section but the home page still renders", async ({ page }) => {
+  await stub(page, { topPicks: { picks: [], degraded: true } });
+  await page.goto("/");
+  await expect(page.getByText("What next?")).toBeVisible();
+  await expect(page.getByText("Top picks for you")).toHaveCount(0);
+});
