@@ -7,6 +7,7 @@ import {
   topPicks,
   type SimilarItemInput,
 } from "@/src/core/recommend";
+import { dcardDiscussion } from "@/src/data/buzz/dcard";
 import { listenNotesBuzz } from "@/src/data/buzz/listennotes";
 import { redditDiscussion } from "@/src/data/buzz/reddit";
 import { v2exDiscussion } from "@/src/data/buzz/v2ex";
@@ -98,14 +99,19 @@ export async function GET(request: Request) {
   const evidenceById = new Map<string, EvidenceItem[]>();
   const candidates: SimilarItemInput[] = await Promise.all(
     finalPool.map(async (s) => {
-      const [xyz, reddit, v2ex, xiaoyuzhou, listen] = await Promise.all([
+      const [xyz, reddit, v2ex, dcard, xiaoyuzhou, listen] = await Promise.all([
         xyzrankBuzz(s.title),
         redditDiscussion(s.title),
         v2exDiscussion(s.title),
+        dcardDiscussion(s.title),
         xiaoyuzhouBuzz(s.title),
         listenNotesBuzz(s.title),
       ]);
-      const evidence = [...(reddit?.evidence ?? []), ...(v2ex?.evidence ?? [])].slice(0, 3);
+      const evidence = [
+        ...(reddit?.evidence ?? []),
+        ...(v2ex?.evidence ?? []),
+        ...(dcard?.evidence ?? []),
+      ].slice(0, 3);
       if (evidence.length > 0) evidenceById.set(s.id, evidence);
       return {
         id: s.id,
@@ -116,7 +122,7 @@ export async function GET(request: Request) {
         episodeCount: s.episodeCount,
         chartRank: chartRanks?.get(s.id),
         trendRank: trendRanks?.get(s.id),
-        buzz: mergeBuzz(xyz, listen, xiaoyuzhou, v2ex?.buzz, reddit?.buzz),
+        buzz: mergeBuzz(xyz, listen, xiaoyuzhou, dcard?.buzz, v2ex?.buzz, reddit?.buzz),
       };
     }),
   );

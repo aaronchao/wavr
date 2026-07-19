@@ -32,13 +32,22 @@ const SIMILAR = {
   degraded: false,
 };
 
-async function stub(page: Page, over: { topPicks?: unknown } = {}) {
+async function stub(page: Page, over: { topPicks?: { picks?: unknown[] } } = {}) {
   await page.route("**/api/**", (r) => r.fulfill({ json: {} }));
   await page.route("**/api/catalog/search**", (r) => r.fulfill({ json: SEARCH }));
   await page.route("**/api/catalog/similar**", (r) => r.fulfill({ json: SIMILAR }));
   await page.route("**/api/catalog/preview**", (r) => r.fulfill({ json: { episodes: [] } }));
   await page.route("**/api/catalog/top-picks**", (r) =>
     r.fulfill({ json: over.topPicks ?? { picks: [], degraded: true } }),
+  );
+  // cold-start discovery (no saved shows) sources the hero from the
+  // community "discussed" chart, so mirror topPicks into it
+  await page.route("**/api/catalog/charts/discussed**", (r) =>
+    r.fulfill({
+      json: over.topPicks
+        ? { shows: over.topPicks.picks ?? [], degraded: false }
+        : { shows: [], degraded: true },
+    }),
   );
 }
 
@@ -48,6 +57,35 @@ test("live search shows results and a 'More like' section without a click", asyn
   await page.fill("input", "Psychology");
   await expect(page.getByText("Psychology In Seattle").first()).toBeVisible();
   await expect(page.getByText("More like Psychology In Seattle")).toBeVisible();
+});
+
+test("search returns episodes with one-click Later", async ({ page }) => {
+  await stub(page);
+  await page.route("**/api/catalog/search**", (r) =>
+    r.fulfill({
+      json: {
+        shows: SEARCH.shows,
+        episodes: [
+          {
+            id: "ep99",
+            title: "A famous episode",
+            showId: "222",
+            showTitle: "Psychology In Seattle",
+            categories: [],
+            appleUrl: "https://podcasts.apple.com/ep99",
+          },
+        ],
+        degraded: false,
+      },
+    }),
+  );
+  await page.goto("/search");
+  await page.fill("input", "Psychology");
+  await expect(page.getByText("A famous episode")).toBeVisible();
+  await page.getByRole("button", { name: "+ Later", exact: true }).first().click();
+  await expect(
+    page.getByRole("button", { name: "Queued ✓", exact: true }).first(),
+  ).toBeVisible();
 });
 
 test("topics lead with trending; personal niche seeds are absent", async ({ page }) => {
@@ -225,9 +263,9 @@ test("discover surfaces the 中文播客榜 chart in the Charts block", async ({
   );
 
   await page.goto("/");
-  // Charts block is present with the 中文播客榜 tab active by default
+  // Charts block is present with the 小宇宙 tab active by default
   await expect(page.getByRole("heading", { name: "Charts" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "中文播客榜" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "小宇宙" })).toBeVisible();
   await expect(page.getByText("故事FM")).toBeVisible();
 });
 

@@ -1,4 +1,5 @@
 import type {
+  CatalogEpisode,
   CatalogSearchResponse,
   CatalogShow,
   CatalogShowResponse,
@@ -23,11 +24,15 @@ function asArray<T>(v: unknown): T[] {
 export async function searchShows(q: string): Promise<CatalogSearchResponse> {
   try {
     const res = await fetch(`/api/catalog/search?q=${encodeURIComponent(q)}`);
-    if (!res.ok) return { shows: [], degraded: true };
+    if (!res.ok) return { shows: [], episodes: [], degraded: true };
     const json = (await res.json()) as Partial<CatalogSearchResponse>;
-    return { shows: asArray<CatalogShow>(json.shows), degraded: Boolean(json.degraded) };
+    return {
+      shows: asArray<CatalogShow>(json.shows),
+      episodes: asArray<CatalogEpisode>(json.episodes),
+      degraded: Boolean(json.degraded),
+    };
   } catch {
-    return { shows: [], degraded: true };
+    return { shows: [], episodes: [], degraded: true };
   }
 }
 

@@ -13,6 +13,7 @@ import {
 import { listSaved, unsaveShow } from "@/src/data/repos/savedShowsRepo";
 import { ExportOpmlButton } from "@/src/features/library/ExportOpmlButton";
 import { ImportOpmlButton } from "@/src/features/library/ImportOpmlButton";
+import { OpenInLinks } from "@/src/features/library/OpenInLinks";
 import { previewEpisode, previewShow } from "@/src/features/player/preview";
 import { useSession } from "@/src/state/useSession";
 import { Chip, CoverTile, PlayableCard } from "@/src/ui";
@@ -113,6 +114,11 @@ function ShowsTab() {
                     Latest: {new Date(latest).toLocaleDateString()}
                   </p>
                 )}
+                <OpenInLinks
+                  title={show.title}
+                  appleUrl={show.appleUrl}
+                  className="relative z-10 mt-1.5"
+                />
               </div>
               <Link
                 href={`/show/${show.id}`}
@@ -222,6 +228,11 @@ function EpisodeRow({
             {resume ? ` · ${resume}` : ""}
             {episode.appleUrl ? "" : " · preview only"}
           </p>
+          <OpenInLinks
+            title={episode.showTitle ? `${episode.showTitle} ${episode.title}` : episode.title}
+            appleUrl={episode.appleUrl}
+            className="relative z-10 mt-1.5"
+          />
         </div>
         {episode.appleUrl && (
           <a

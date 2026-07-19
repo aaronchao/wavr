@@ -4,9 +4,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { searchShows } from "@/src/data/catalog/client";
-import type { CatalogShow } from "@/src/data/catalog/types";
+import type { CatalogEpisode, CatalogShow } from "@/src/data/catalog/types";
+import {
+  isEpisodeSaved,
+  removeEpisode,
+  saveEpisode,
+} from "@/src/data/repos/savedEpisodesRepo";
 import { isSaved, saveShow, unsaveShow } from "@/src/data/repos/savedShowsRepo";
-import { previewShow } from "@/src/features/player/preview";
+import { previewEpisode, previewShow } from "@/src/features/player/preview";
 import { SimilarContent } from "@/src/features/show/SimilarContent";
 import { Chip, CoverTile, PlayableCard } from "@/src/ui";
 
@@ -69,12 +74,76 @@ export default function SearchPage() {
         ))}
       </ul>
 
+      {data && data.episodes.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+            Episodes
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {data.episodes.slice(0, 12).map((ep) => (
+              <EpisodeRow key={ep.id} episode={ep} />
+            ))}
+          </ul>
+        </section>
+      )}
+
       {topResult && !data?.degraded && (
         <div className="mt-10">
           <SimilarContent showId={topResult.id} seedTitle={topResult.title} />
         </div>
       )}
     </main>
+  );
+}
+
+/** A matching episode with one-click "Later" to queue it into the Library. */
+function EpisodeRow({ episode }: { episode: CatalogEpisode }) {
+  const queryClient = useQueryClient();
+  const [queued, setQueued] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void isEpisodeSaved(episode.id).then((v) => {
+      if (!cancelled) setQueued(v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [episode.id]);
+
+  // ONE_CLICK: a single tap queues (or un-queues) the episode for later.
+  function toggleLater() {
+    const next = !queued;
+    setQueued(next);
+    void (next ? saveEpisode(episode) : removeEpisode(episode.id)).then(() =>
+      queryClient.invalidateQueries({ queryKey: ["savedEpisodes"] }),
+    );
+  }
+
+  return (
+    <li>
+      <PlayableCard
+        onPlay={() => previewEpisode(episode)}
+        playLabel={`Preview ${episode.title}`}
+        className="cursor-pointer gap-4"
+      >
+        <CoverTile src={episode.coverUrl} size={56} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{episode.title}</p>
+          {episode.showTitle && (
+            <p className="truncate text-sm text-zinc-500">{episode.showTitle}</p>
+          )}
+          <p className="truncate text-xs text-zinc-400">▶ Click for a 30s clip</p>
+        </div>
+        <Chip
+          active={queued}
+          onClick={() => toggleLater()}
+          className="relative z-10 shrink-0"
+        >
+          {queued ? "Queued ✓" : "+ Later"}
+        </Chip>
+      </PlayableCard>
+    </li>
   );
 }
 

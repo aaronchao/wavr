@@ -14,6 +14,8 @@ export type BuzzInput = {
   redditComments?: number;
   /** V2EX threads mentioning the show (niche zh tech/interest community). */
   v2exMentions?: number;
+  /** Dcard posts mentioning the show (Taiwanese social forum). */
+  dcardMentions?: number;
   /** 1-based rank on 中文播客榜 (xyzrank) popular podcasts. */
   xyzrankRank?: number;
   /** 小宇宙 stats, when available (xyzrank payloads or env-gated API). */
@@ -48,6 +50,7 @@ function discussionParts(b: BuzzInput): number[] {
     discussion.push(Math.min(1, 0.6 * volume + 0.4 * traction));
   }
   if (b.v2exMentions != null) discussion.push(logScale(b.v2exMentions, 1.5)); // ~30 threads -> 1
+  if (b.dcardMentions != null) discussion.push(logScale(b.dcardMentions, 1.5));
   if (b.comments != null) discussion.push(logScale(b.comments, 4)); // 小宇宙 comments
   return discussion;
 }
@@ -100,6 +103,9 @@ export function buzzWhy(b: BuzzInput | undefined): string | null {
   }
   if ((b.v2exMentions ?? 0) >= 3) {
     return `Discussed on V2EX (${b.v2exMentions} threads)`;
+  }
+  if ((b.dcardMentions ?? 0) >= 3) {
+    return `Discussed on Dcard (${b.dcardMentions} posts)`;
   }
   if ((b.comments ?? 0) >= 500) {
     return `Lively comments on 小宇宙`;

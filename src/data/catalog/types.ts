@@ -49,6 +49,8 @@ export type PreviewResponse = {
 
 export type CatalogSearchResponse = {
   shows: CatalogShow[];
+  /** Matching episodes for the query (one-click "Later" to queue them). */
+  episodes: CatalogEpisode[];
   /** True when every upstream provider failed (never a thrown error). */
   degraded: boolean;
 };

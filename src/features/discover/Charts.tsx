@@ -71,7 +71,7 @@ export function Charts() {
 
       <div className="mb-4 flex flex-wrap gap-2">
         <ChartTab label="社区热议" active={tab === "discussed"} onClick={() => setPicked("discussed")} />
-        <ChartTab label="中文播客榜" active={tab === "chinese"} onClick={() => setPicked("chinese")} />
+        <ChartTab label="小宇宙" active={tab === "chinese"} onClick={() => setPicked("chinese")} />
         <ChartTab label="Apple" active={tab === "global"} onClick={() => setPicked("global")} />
       </div>
 
