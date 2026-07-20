@@ -5,6 +5,7 @@ import type {
   CatalogShowResponse,
   ChineseChartsResponse,
   CommunityRecsResponse,
+  DiscoverTopicsResponse,
   DiscussedChartsResponse,
   EpisodeChartsResponse,
   EpisodesRankedResponse,
@@ -128,6 +129,17 @@ export async function getGlobalCharts(limit = 24): Promise<GlobalChartsResponse>
     return { shows: asArray(json.shows), degraded: Boolean(json.degraded) };
   } catch {
     return { shows: [], degraded: true };
+  }
+}
+
+export async function getDiscoverTopics(): Promise<DiscoverTopicsResponse> {
+  try {
+    const res = await fetch("/api/discover/topics");
+    if (!res.ok) return { topics: [], degraded: true };
+    const json = (await res.json()) as Partial<DiscoverTopicsResponse>;
+    return { topics: asArray(json.topics), degraded: Boolean(json.degraded) };
+  } catch {
+    return { topics: [], degraded: true };
   }
 }
 

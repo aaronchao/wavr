@@ -13,7 +13,6 @@ import {
 } from "@/src/data/repos/savedEpisodesRepo";
 import { isSaved, saveShow, unsaveShow } from "@/src/data/repos/savedShowsRepo";
 import { previewEpisode, previewShow } from "@/src/features/player/preview";
-import { SimilarContent } from "@/src/features/show/SimilarContent";
 import { Chip, CoverTile, PlayableCard } from "@/src/ui";
 
 const DEBOUNCE_MS = 350;
@@ -53,8 +52,6 @@ function SearchInner() {
     enabled: term.length >= MIN_QUERY_LENGTH,
     placeholderData: (prev) => prev, // keep old results while retyping
   });
-
-  const topResult = data?.shows[0];
 
   return (
     <main className="mx-auto w-full max-w-5xl p-4 pb-40 sm:p-8 sm:pb-40">
@@ -126,11 +123,6 @@ function SearchInner() {
         </div>
       )}
 
-      {topResult && !data?.degraded && (
-        <div className="mt-10">
-          <SimilarContent showId={topResult.id} seedTitle={topResult.title} />
-        </div>
-      )}
     </main>
   );
 }

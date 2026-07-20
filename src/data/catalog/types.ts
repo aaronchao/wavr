@@ -111,6 +111,8 @@ export type ChartEpisodeItem = {
   /** 小宇宙 episode page, when the board provides it. */
   url?: string;
   why: string;
+  /** Which forum or topic this episode is being discussed under. */
+  context?: string;
 };
 
 /** Response of /api/catalog/charts/episodes — ranked hot episodes. */
@@ -136,6 +138,15 @@ export type EpisodesRankedResponse = {
   degraded: boolean;
 };
 export type SimilarEpisode = CatalogEpisode & { why: string };
+
+/** A trending topic chip for the Discover "pick a topic" row. */
+export type DiscoverTopic = { label: string; query: string; lang: "en" | "zh" };
+
+/** Response of /api/discover/topics — a live EN + 中文 trending mix. */
+export type DiscoverTopicsResponse = {
+  topics: DiscoverTopic[];
+  degraded: boolean;
+};
 
 /** Response of /api/recs/community — mined from real community discussion. */
 export type CommunityRecsResponse = {

@@ -20,9 +20,10 @@ describe("platformLinks", () => {
     expect(spotify.isSearch).toBe(true);
   });
 
-  it("returns null (dimmed chip) for Apple without a stored URL", () => {
+  it("falls back to Apple Podcasts web search when no URL is stored", () => {
     const apple = platformLinks("Some Show").find((l) => l.id === "apple")!;
-    expect(apple.url).toBeNull();
+    expect(apple.url).toBe("https://podcasts.apple.com/us/search?term=Some%20Show");
+    expect(apple.isSearch).toBe(true);
   });
 
   it("always returns all four platforms in stable order", () => {

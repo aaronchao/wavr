@@ -21,8 +21,11 @@ type Tab = "discussed" | "chinese" | "global";
  * it. Each row is a real show: playable, saveable, openable, with tappable
  * evidence. Hidden only when every board is unreachable.
  */
+const DEFAULT_VISIBLE = 10;
+
 export function Charts() {
   const [picked, setPicked] = useState<Tab | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const discussed = useQuery({
     queryKey: ["catalog", "charts", "discussed"],
     queryFn: () => getDiscussedCharts(24),
@@ -86,15 +89,45 @@ export function Charts() {
           This board is quiet right now — try another tab.
         </p>
       ) : (
-        <ol className="flex flex-col gap-2.5">
-          {shows.map((show, i) => (
-            <SettleIn key={show.id} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
-              <ShowRowCompact show={show} rank={i + 1} />
-            </SettleIn>
-          ))}
-        </ol>
+        <>
+          <ol className="flex flex-col gap-2.5">
+            {(showAll ? shows : shows.slice(0, DEFAULT_VISIBLE)).map((show, i) => (
+              <SettleIn key={show.id} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
+                <ShowRowCompact show={show} rank={i + 1} />
+              </SettleIn>
+            ))}
+          </ol>
+          {shows.length > DEFAULT_VISIBLE && (
+            <ShowMoreButton
+              expanded={showAll}
+              hiddenCount={shows.length - DEFAULT_VISIBLE}
+              onClick={() => setShowAll((v) => !v)}
+            />
+          )}
+        </>
       )}
     </section>
+  );
+}
+
+/** Shared "Show N more / Show less" toggle for the capped chart lists. */
+export function ShowMoreButton({
+  expanded,
+  hiddenCount,
+  onClick,
+}: {
+  expanded: boolean;
+  hiddenCount: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="font-brand mt-3 w-full rounded-pill border border-surface-border bg-surface px-4 py-2 text-xs uppercase tracking-wider text-zinc-700 transition-colors hover:text-foreground dark:text-zinc-200"
+    >
+      {expanded ? "Show less ↑" : `Show ${hiddenCount} more ↓`}
+    </button>
   );
 }
 

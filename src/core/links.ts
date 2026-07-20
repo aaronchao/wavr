@@ -1,8 +1,14 @@
 /**
  * Deep-link OUT (Section 6): web URLs opened in a new tab. Stored URL when
- * known, else a platform search URL for the show name. Apple has no search
- * fallback (its URL comes from iTunes or not at all) — a missing link
- * renders as a dimmed chip, never an error. PURE module.
+ * known, else the app's web search for the show name so the icon still works.
+ * A missing link with no fallback renders dimmed, never an error. PURE module.
+ *
+ * RSS-import note: the four consumer apps we link to (Apple, Spotify, YouTube
+ * Music, 小宇宙) expose no *public web* add-by-RSS URL — their RSS import is a
+ * native/mobile app-scheme flow, which can't open reliably from a web tab. So
+ * when a show isn't on an app we fall back to that app's web *search* (the
+ * closest working equivalent); the show's raw feed is always portable via the
+ * Library's OPML export for apps that do support add-by-URL.
  */
 
 export type PlatformId = "apple" | "spotify" | "youtubeMusic" | "xiaoyuzhou";
@@ -10,7 +16,7 @@ export type PlatformId = "apple" | "spotify" | "youtubeMusic" | "xiaoyuzhou";
 export type PlatformLink = {
   id: PlatformId;
   label: string;
-  /** Web URL to open, or null -> render the chip dimmed/disabled. */
+  /** Web URL to open, or null -> render the icon dimmed/disabled. */
   url: string | null;
   /** True when this is a search-for-title link rather than a stored URL. */
   isSearch: boolean;
@@ -31,7 +37,7 @@ export function platformLinks(
     return { id, label, url: searchUrl, isSearch: searchUrl !== null };
   };
   return [
-    entry("apple", "Apple Podcasts", null),
+    entry("apple", "Apple Podcasts", `https://podcasts.apple.com/us/search?term=${q}`),
     entry("spotify", "Spotify", `https://open.spotify.com/search/${q}`),
     entry("youtubeMusic", "YouTube Music", `https://music.youtube.com/search?q=${q}`),
     entry("xiaoyuzhou", "小宇宙", `https://www.xiaoyuzhoufm.com/search/${q}`),

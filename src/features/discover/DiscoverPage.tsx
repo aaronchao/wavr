@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { defaultTopics } from "@/src/core/recommend";
+import { getDiscoverTopics } from "@/src/data/catalog/client";
+import type { DiscoverTopic } from "@/src/data/catalog/types";
 import { listSaved } from "@/src/data/repos/savedShowsRepo";
 import { useSession } from "@/src/state/useSession";
 import { Charts } from "./Charts";
@@ -43,6 +45,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 const TOPICS = defaultTopics();
 /** Chinese-language topic chips (drive same-language search + filtering). */
 const CN_TOPICS = ["商业", "科技", "文化", "历史", "情感", "悬疑", "喜剧", "读书", "新闻", "生活"];
+const STATIC_TOPICS: DiscoverTopic[] = [
+  ...TOPICS.map((t) => ({ label: t, query: t, lang: "en" as const })),
+  ...CN_TOPICS.map((t) => ({ label: t, query: t, lang: "zh" as const })),
+];
 
 /**
  * Mood entry points — discovery by feeling, not genre. Each `query` is a
@@ -74,6 +80,16 @@ export function DiscoverPage() {
 
   const [topic, setTopic] = useState<string | null>(null);
   const [deckOpen, setDeckOpen] = useState(false);
+
+  // "Pick a topic" — a live EN + 中文 trending mix from the discussion backend,
+  // falling back to the static set when the endpoint is unreachable.
+  const topicsQ = useQuery({
+    queryKey: ["discover", "topics"],
+    queryFn: getDiscoverTopics,
+    staleTime: 6 * 60 * 60 * 1000,
+  });
+  const topicChips =
+    topicsQ.data && topicsQ.data.topics.length > 0 ? topicsQ.data.topics : STATIC_TOPICS;
   const picks = useDiscoverPicks({ seedIds, topic, savedReady: savedQ.isSuccess });
   const heroPicks = picks.hero ? [picks.hero, ...picks.rest] : [];
 
@@ -88,7 +104,9 @@ export function DiscoverPage() {
         </div>
         <h1 className="font-brand mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Discover</h1>
         <p className="mt-2 max-w-lg text-zinc-500">
-          Chosen by real people — <span className="text-foreground">Reddit · 豆瓣 · V2EX · 小宇宙</span>,
+          Rankings & recommendations are sourced from community &amp; forum
+          discussions —{" "}
+          <span className="text-foreground">Reddit · 豆瓣 · V2EX · PTT · Dcard · LIHKG · 小宇宙</span>,
           not the charts. One tap plays the bit they actually argue about.
         </p>
         <button
@@ -116,17 +134,17 @@ export function DiscoverPage() {
         </div>
       </div>
 
-      {/* Topic lens — English + 中文 */}
+      {/* Topic lens — a live English + 中文 mix from community discussion */}
       <div className="mb-8">
         <SectionLabel>Or pick a topic</SectionLabel>
         <div className="mt-2 flex flex-wrap gap-2">
           <TopicChip label="For you" active={topic === null} onClick={() => setTopic(null)} />
-          {[...TOPICS, ...CN_TOPICS].map((t) => (
+          {topicChips.map((t) => (
             <TopicChip
-              key={t}
-              label={t}
-              active={topic === t}
-              onClick={() => setTopic((cur) => (cur === t ? null : t))}
+              key={`${t.lang ?? "x"}:${t.label}`}
+              label={t.label}
+              active={topic === t.query}
+              onClick={() => setTopic((cur) => (cur === t.query ? null : t.query))}
             />
           ))}
         </div>

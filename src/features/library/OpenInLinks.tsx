@@ -13,17 +13,30 @@ export function OpenInLinks({
   title,
   appleUrl,
   className = "",
+  label = "Open in",
+  size = "sm",
+  onOpen,
 }: {
   title: string;
   appleUrl?: string;
   className?: string;
+  /** Tiny inline caption; pass "" for icons only (a heading supplies context). */
+  label?: string;
+  /** "md" gives larger tappable targets for the show-detail Listen-on row. */
+  size?: "sm" | "md";
+  /** Fired when a link is opened (e.g. to record an 'open' engagement). */
+  onOpen?: () => void;
 }) {
   const links = platformLinks(title, { apple: appleUrl });
+  const box = size === "md" ? "h-9 w-9" : "h-7 w-7";
+  const glyph = size === "md" ? "h-5 w-5" : "h-4 w-4";
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
-      <span className="font-brand text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-        Open in
-      </span>
+      {label && (
+        <span className="font-brand text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          {label}
+        </span>
+      )}
       {links.map((l) => {
         const Icon = PLATFORM_ICONS[l.id];
         return l.url ? (
@@ -32,21 +45,24 @@ export function OpenInLinks({
             href={l.url}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Open in ${l.label}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen?.();
+            }}
+            aria-label={`Open in ${l.label}${l.isSearch ? " (search)" : ""}`}
             title={`${l.label}${l.isSearch ? " (search)" : ""}`}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-surface text-zinc-600 transition-colors hover:bg-accent-soft hover:text-accent dark:text-zinc-300"
+            className={`flex ${box} items-center justify-center rounded-full bg-surface text-zinc-600 transition-colors hover:bg-accent-soft hover:text-accent dark:text-zinc-300`}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className={glyph} />
           </a>
         ) : (
           <span
             key={l.id}
             aria-disabled
             title={`${l.label} — link unavailable`}
-            className="flex h-7 w-7 cursor-not-allowed items-center justify-center rounded-full bg-surface text-zinc-400 opacity-40"
+            className={`flex ${box} cursor-not-allowed items-center justify-center rounded-full bg-surface text-zinc-400 opacity-40`}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className={glyph} />
           </span>
         );
       })}

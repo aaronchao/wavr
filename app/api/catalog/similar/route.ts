@@ -83,7 +83,10 @@ export async function GET(request: Request) {
 
   const allShows = [...showById.values()];
   const langShows = allShows.filter((s) => inLanguage(s.title, s.description));
-  const showPool = langShows.length > 0 ? langShows : allShows;
+  // Strict for a CJK seed: never leak cross-language recs, even if that means
+  // fewer rows (a Chinese show like 击剑俱乐部 only gets Chinese neighbours).
+  // For non-locked (English) seeds, keep the graceful fallback.
+  const showPool = languageLocked ? langShows : langShows.length > 0 ? langShows : allShows;
 
   // 中文播客榜 buzz is one cached index fetch — cheap enough for all
   const showCandidates: SimilarItemInput[] = await Promise.all(
@@ -107,7 +110,7 @@ export async function GET(request: Request) {
 
   const allEps = [...episodeById.values()].filter((e) => e.showId !== seed.id);
   const langEps = allEps.filter((e) => inLanguage(e.title, e.description));
-  const episodePool = langEps.length > 0 ? langEps : allEps;
+  const episodePool = languageLocked ? langEps : langEps.length > 0 ? langEps : allEps;
 
   const episodeCandidates: SimilarItemInput[] = episodePool
     // episodes of the seed show itself aren't "similar content"

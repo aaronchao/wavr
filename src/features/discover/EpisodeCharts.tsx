@@ -11,6 +11,7 @@ import {
   saveEpisode,
 } from "@/src/data/repos/savedEpisodesRepo";
 import { Chip, SettleIn } from "@/src/ui";
+import { ShowMoreButton } from "./Charts";
 import { MachineLabel } from "./DiscoverPage";
 
 /**
@@ -19,7 +20,10 @@ import { MachineLabel } from "./DiscoverPage";
  * 小宇宙, or followed into the show via search. Hidden when the board is
  * unreachable — never an empty shell.
  */
+const DEFAULT_VISIBLE = 10;
+
 export function EpisodeCharts() {
+  const [showAll, setShowAll] = useState(false);
   const q = useQuery({
     queryKey: ["catalog", "charts", "episodes"],
     queryFn: () => getEpisodeCharts(20),
@@ -36,8 +40,8 @@ export function EpisodeCharts() {
         <MachineLabel>hot episodes</MachineLabel>
       </div>
       <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">
-        The single episodes people play and argue about on 小宇宙 — queue any
-        for later.
+        Single episodes people are discussing right now — each tagged with the
+        forum or topic it&apos;s talked about in. Queue any for later.
       </p>
 
       {q.isLoading ? (
@@ -47,13 +51,22 @@ export function EpisodeCharts() {
           ))}
         </div>
       ) : (
-        <ol className="flex flex-col gap-2">
-          {eps.map((ep, i) => (
-            <SettleIn key={ep.id} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
-              <EpisodeRow ep={ep} rank={i + 1} />
-            </SettleIn>
-          ))}
-        </ol>
+        <>
+          <ol className="flex flex-col gap-2">
+            {(showAll ? eps : eps.slice(0, DEFAULT_VISIBLE)).map((ep, i) => (
+              <SettleIn key={ep.id} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
+                <EpisodeRow ep={ep} rank={i + 1} />
+              </SettleIn>
+            ))}
+          </ol>
+          {eps.length > DEFAULT_VISIBLE && (
+            <ShowMoreButton
+              expanded={showAll}
+              hiddenCount={eps.length - DEFAULT_VISIBLE}
+              onClick={() => setShowAll((v) => !v)}
+            />
+          )}
+        </>
       )}
     </section>
   );
@@ -102,23 +115,21 @@ function EpisodeRow({ ep, rank }: { ep: ChartEpisodeItem; rank: number }) {
             {ep.showTitle} →
           </Link>
         )}
-        <p className="line-clamp-1 text-[11px] text-accent">◆ {ep.why}</p>
-      </div>
-      <div className="flex shrink-0 flex-col items-end gap-1.5">
-        {ep.url && (
-          <a
-            href={ep.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-pill bg-surface px-2.5 py-1 text-xs font-medium hover:opacity-80"
-          >
-            ↗
-          </a>
+        {/* where it's being discussed — forum/topic, not a podcast-app link */}
+        {ep.context && (
+          <p className="line-clamp-1 text-[11px] font-medium text-accent">
+            💬 {ep.context}
+          </p>
         )}
-        <Chip active={queued} onClick={() => toggleLater()} className="!px-2 !py-1 !text-xs">
-          {queued ? "✓" : "+ Later"}
-        </Chip>
+        <p className="line-clamp-1 text-[11px] text-zinc-400">{ep.why}</p>
       </div>
+      <Chip
+        active={queued}
+        onClick={() => toggleLater()}
+        className="shrink-0 self-start !px-2 !py-1 !text-xs"
+      >
+        {queued ? "✓" : "+ Later"}
+      </Chip>
     </li>
   );
 }

@@ -30,16 +30,18 @@ export async function GET(request: Request) {
         showTitle: e.showTitle,
         url: e.url,
         why: whyForXyz(e.plays, e.comments),
+        context: "小宇宙 热门单集", // the forum this episode is discussed on
       })),
       degraded: false,
     });
   }
 
-  // Fallback: key-free iTunes episodes, newest-first, deduped by title.
+  // Fallback: key-free iTunes episodes, newest-first, deduped by title. Each
+  // query doubles as the "topic" this episode is trending under.
   const lists = await Promise.all(FALLBACK_QUERIES.map((q) => itunesEpisodeSearch(q)));
   const seen = new Set<string>();
   const scored: { row: ChartEpisodeItem; ts: number }[] = [];
-  for (const list of lists) {
+  lists.forEach((list, qi) => {
     for (const ep of list ?? []) {
       const key = ep.title.trim().toLowerCase();
       if (!ep.title.trim() || seen.has(key)) continue;
@@ -50,12 +52,12 @@ export async function GET(request: Request) {
           id: ep.id,
           title: ep.title,
           showTitle: ep.showTitle,
-          url: ep.appleUrl,
           why: whyForFresh(ep.publishedAt),
+          context: `Topic · ${FALLBACK_QUERIES[qi]}`,
         },
       });
     }
-  }
+  });
   if (scored.length === 0) {
     return json({ episodes: [], degraded: true });
   }

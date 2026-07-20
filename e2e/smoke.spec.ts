@@ -54,12 +54,11 @@ async function stub(
   );
 }
 
-test("live search shows results and a 'More like' section without a click", async ({ page }) => {
+test("live search shows results without a click", async ({ page }) => {
   await stub(page);
   await page.goto("/search");
   await page.fill("input", "Psychology");
   await expect(page.getByText("Psychology In Seattle").first()).toBeVisible();
-  await expect(page.getByText("More like Psychology In Seattle")).toBeVisible();
 });
 
 test("search returns episodes with one-click Later", async ({ page }) => {
@@ -107,12 +106,31 @@ test("settings offers custom interests, no personal seeds", async ({ page }) => 
 
 test("queue an episode for later, then it appears in the Library", async ({ page }) => {
   await stub(page);
+  await page.route("**/api/catalog/search**", (r) =>
+    r.fulfill({
+      json: {
+        shows: SEARCH.shows,
+        episodes: [
+          {
+            id: "ep12",
+            title: "Ep 12: Attachment styles",
+            showId: "222",
+            showTitle: "Psychology In Seattle",
+            categories: [],
+            appleUrl: "https://podcasts.apple.com/ep12",
+          },
+        ],
+        degraded: false,
+      },
+    }),
+  );
   await page.goto("/search");
   await page.fill("input", "Psychology");
-  await page.getByText("More like Psychology In Seattle").waitFor();
-  await page.getByRole("button", { name: /Episodes \(1\)/ }).click();
-  await page.getByRole("button", { name: "+ Later", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Queued ✓", exact: true })).toBeVisible();
+  await expect(page.getByText("Ep 12: Attachment styles")).toBeVisible();
+  await page.getByRole("button", { name: "+ Later", exact: true }).first().click();
+  await expect(
+    page.getByRole("button", { name: "Queued ✓", exact: true }).first(),
+  ).toBeVisible();
 
   await page.goto("/library");
   await page.getByRole("button", { name: "Listen later" }).click();

@@ -3,12 +3,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { platformLinks } from "@/src/core/links";
 import { getShow } from "@/src/data/catalog/client";
 import type { CatalogShow } from "@/src/data/catalog/types";
 import { recordEngagement } from "@/src/data/repos/engagementRepo";
 import { isSaved, saveShow, unsaveShow } from "@/src/data/repos/savedShowsRepo";
 import { RatingBadges } from "@/src/features/show/RatingBadges";
+import { OpenInLinks } from "@/src/features/library/OpenInLinks";
 import { CommunityRecs } from "@/src/features/show/CommunityRecs";
 import { SimilarContent } from "@/src/features/show/SimilarContent";
 import { TopEpisodes } from "@/src/features/show/TopEpisodes";
@@ -56,10 +56,6 @@ function ShowDetail({ show }: { show: CatalogShow }) {
     );
   }
 
-  const links = platformLinks(show.title, {
-    apple: show.appleUrl,
-  });
-
   // deep-link click = 'open' engagement (+1) — you were curious enough
   function onOpen() {
     void recordEngagement(show, "open");
@@ -99,32 +95,14 @@ function ShowDetail({ show }: { show: CatalogShow }) {
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
           Listen on
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {links.map((link) =>
-            link.url ? (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={onOpen}
-                className="rounded-pill bg-surface px-3 py-1.5 text-sm font-medium hover:opacity-80"
-              >
-                {link.label}
-                {link.isSearch ? " ↗" : ""}
-              </a>
-            ) : (
-              // missing platform = dimmed chip, never an error (Section 6)
-              <span
-                key={link.id}
-                aria-disabled
-                className="cursor-not-allowed rounded-pill bg-surface px-3 py-1.5 text-sm font-medium opacity-40"
-              >
-                {link.label}
-              </span>
-            ),
-          )}
-        </div>
+        {/* icons only — saves horizontal space on mobile (no text labels) */}
+        <OpenInLinks
+          title={show.title}
+          appleUrl={show.appleUrl}
+          label=""
+          size="md"
+          onOpen={onOpen}
+        />
       </section>
 
       {show.description && (
