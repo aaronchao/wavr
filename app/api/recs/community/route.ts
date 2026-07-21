@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSupabase } from "@/src/data/mining/admin";
+import { getSupabase } from "@/src/data/supabase/client";
 import type {
   CatalogShow,
   CommunityRecsResponse,
@@ -10,9 +10,11 @@ import type {
 /**
  * Serve community-mined recommendations for a seed show — read straight from
  * the precomputed `rec_edges` table, so this is a single indexed lookup (~10ms,
- * no external calls). Returns `degraded: true` when the pipeline hasn't produced
- * edges for this seed yet (or secrets aren't set); the caller then falls back to
- * the live discussion path, so the surface never renders worse than today.
+ * no external calls). Uses the ANON client on purpose: `rec_edges` + `shows`
+ * are world-readable caches, so serving needs no service-role key (that only
+ * lives in the offline pipeline). Returns `degraded: true` when the pipeline
+ * hasn't produced edges for this seed yet; the caller then falls back to the
+ * live discussion path, so the surface never renders worse than today.
  */
 
 type EdgeRow = {
@@ -43,10 +45,10 @@ export async function GET(request: Request) {
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 24) : 12;
   if (!seed) return NextResponse.json(EMPTY);
 
-  const admin = getAdminSupabase();
-  if (!admin) return NextResponse.json(EMPTY);
+  const sb = getSupabase();
+  if (!sb) return NextResponse.json(EMPTY);
 
-  const { data: edgeData, error } = await admin
+  const { data: edgeData, error } = await sb
     .from("rec_edges")
     .select("rec_show_id, score, author_count, sentiment_avg, evidence")
     .eq("seed_show_id", seed)
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
   if (error || !edgeData || edgeData.length === 0) return NextResponse.json(EMPTY);
 
   const edges = edgeData as EdgeRow[];
-  const { data: showData } = await admin
+  const { data: showData } = await sb
     .from("shows")
     .select("*")
     .in("id", edges.map((e) => e.rec_show_id));
