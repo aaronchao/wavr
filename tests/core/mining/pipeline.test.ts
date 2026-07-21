@@ -48,6 +48,18 @@ describe("extractEdges (per document)", () => {
     );
     expect(selfOnly).toEqual([]); // only the seed appears → no self edge
   });
+
+  it("pairs up shows in a seedless rec-intent thread (co-mention)", () => {
+    // a "best podcasts" list names several shows but no single seed
+    const edges = extractEdges(
+      doc({ title: "Best podcasts? Share your favorites", body: "Radiolab and Reply All" }),
+      gaz,
+    );
+    const pairs = edges.map((e) => `${e.recShowId}`).sort();
+    // undirected: Radiolab <-> Reply All (both directions emitted)
+    expect(pairs).toEqual(["radiolab", "replyall"]);
+    expect(edges.every((e) => e.seedShowId !== e.recShowId)).toBe(true);
+  });
 });
 
 describe("aggregateEdges (author-diversity gate)", () => {

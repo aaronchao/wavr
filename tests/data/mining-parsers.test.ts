@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseRedditListing } from "@/src/data/mining/harvest/reddit";
 import { parseRssDocs } from "@/src/data/mining/harvest/douban";
+import { parseHnHits } from "@/src/data/mining/harvest/hackernews";
 
 describe("parseRedditListing", () => {
   it("maps a search listing into RawDocs", () => {
@@ -64,5 +65,36 @@ describe("parseRssDocs (Douban via RSSHub)", () => {
 
   it("handles a single-item feed and junk input", () => {
     expect(parseRssDocs("not xml", "douban")).toEqual([]);
+  });
+});
+
+describe("parseHnHits (Hacker News / Algolia)", () => {
+  it("maps stories and comments, stripping HTML from comments", () => {
+    const json = {
+      hits: [
+        { objectID: "1", title: "Ask HN: Best podcasts?", author: "alice" },
+        {
+          objectID: "2",
+          story_title: "Ask HN: Best podcasts?",
+          comment_text: "I love <i>Radiolab</i> and Reply All",
+          author: "bob",
+        },
+        { objectID: "3" }, // no title/story_title → skipped
+      ],
+    };
+    const docs = parseHnHits(json);
+    expect(docs).toHaveLength(2);
+    expect(docs[0]).toMatchObject({ id: "hn:1", source: "hackernews", title: "Ask HN: Best podcasts?" });
+    expect(docs[1]).toMatchObject({
+      id: "hn:2",
+      body: "I love Radiolab and Reply All",
+      author: "hn:bob",
+      url: "https://news.ycombinator.com/item?id=2",
+    });
+  });
+
+  it("returns [] on junk", () => {
+    expect(parseHnHits({})).toEqual([]);
+    expect(parseHnHits(null)).toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
 import { type Gazetteer, type RawMatch, scan } from "./gazetteer";
-import { detectThreadSeed, hasCueNear } from "./intent";
+import { detectThreadSeed, hasCueNear, hasRecIntentTitle } from "./intent";
 import { normalize } from "./normalize";
 import { sentimentOf } from "./sentiment";
 import {
@@ -13,6 +13,8 @@ import {
 } from "./types";
 
 const SENTIMENT_RADIUS = 30;
+const COMENTION_CAP = 6; // most shows we pair up in a seedless rec thread
+const COMENTION_FACTOR = 0.5; // co-mentions are weaker than a directed rec
 
 const SOURCE_LABEL: Record<string, string> = {
   reddit: "Reddit",
@@ -62,10 +64,14 @@ export function extractMentions(doc: RawDoc, gaz: Gazetteer): Mention[] {
 }
 
 /**
- * The (seed → rec) votes from one document. M1 is precision-first: only
- * rec-seeking threads that name exactly one seed produce edges; every distinct
- * show named in the body becomes a candidate, weighted by confidence and
- * sentiment. Threads with no clear seed yield nothing (widened later).
+ * The (seed → rec) votes from one document. Two shapes, both precision-guarded:
+ *  1. DIRECTED — a rec-seeking thread that names exactly one seed ("podcasts
+ *     like X?"): every other show in the body is a recommendation for X,
+ *     weighted by confidence and sentiment.
+ *  2. CO-MENTION — a rec-intent thread with no single seed (a "best podcasts"
+ *     list): the shows it names are paired up, undirected and at a lower
+ *     weight. Still author-gated downstream, so a pair must recur across ≥2
+ *     authors to surface. Non-rec threads yield nothing.
  */
 export function extractEdges(
   doc: RawDoc,
@@ -73,9 +79,8 @@ export function extractEdges(
   opts: MiningOptions = DEFAULT_OPTIONS,
 ): CandidateEdge[] {
   const normTitle = normalize(doc.title);
-  const seed = detectThreadSeed(normTitle, scan(gaz, normTitle));
-  if (!seed) return [];
-
+  const titleMatches = scan(gaz, normTitle);
+  const seed = detectThreadSeed(normTitle, titleMatches);
   const normBody = normalize(doc.body);
   const cpBody = [...normBody];
   const evidence: EdgeEvidence = {
@@ -84,31 +89,66 @@ export function extractEdges(
     url: doc.url,
   };
 
-  // Keep the strongest occurrence per recommended show within this doc.
-  const best = new Map<string, CandidateEdge>();
-  for (const m of scan(gaz, normBody)) {
-    if (m.showId === seed) continue; // no self-edges
-    const confidence = confidenceInThread(m, cpBody);
-    if (confidence < opts.minConfidence) continue;
-    const window = cpBody
-      .slice(Math.max(0, m.start - SENTIMENT_RADIUS), m.end + SENTIMENT_RADIUS)
-      .join("");
-    const sentiment = sentimentOf(window);
-    const weight = confidence * (1 + 0.4 * sentiment);
-    const prev = best.get(m.showId);
-    if (!prev || weight > prev.weight) {
-      best.set(m.showId, {
-        seedShowId: seed,
-        recShowId: m.showId,
-        weight,
+  // 1. Directed: keep the strongest occurrence per recommended show.
+  if (seed) {
+    const best = new Map<string, CandidateEdge>();
+    for (const m of scan(gaz, normBody)) {
+      if (m.showId === seed) continue; // no self-edges
+      const confidence = confidenceInThread(m, cpBody);
+      if (confidence < opts.minConfidence) continue;
+      const window = cpBody
+        .slice(Math.max(0, m.start - SENTIMENT_RADIUS), m.end + SENTIMENT_RADIUS)
+        .join("");
+      const sentiment = sentimentOf(window);
+      const weight = confidence * (1 + 0.4 * sentiment);
+      const prev = best.get(m.showId);
+      if (!prev || weight > prev.weight) {
+        best.set(m.showId, {
+          seedShowId: seed,
+          recShowId: m.showId,
+          weight,
+          docId: doc.id,
+          author: doc.author,
+          sentiment,
+          evidence,
+        });
+      }
+    }
+    return [...best.values()];
+  }
+
+  // 2. Co-mention: only inside a rec-intent thread that names ≥2 shows.
+  if (!hasRecIntentTitle(normTitle)) return [];
+  const bestConf = new Map<string, number>();
+  const consider = (showId: string, conf: number) => {
+    if (conf < opts.minConfidence) return;
+    const prev = bestConf.get(showId);
+    if (prev === undefined || conf > prev) bestConf.set(showId, conf);
+  };
+  for (const m of titleMatches) consider(m.showId, 1); // title context is strong
+  for (const m of scan(gaz, normBody)) consider(m.showId, confidenceInThread(m, cpBody));
+
+  const shows = [...bestConf.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, COMENTION_CAP);
+  if (shows.length < 2) return [];
+
+  const out: CandidateEdge[] = [];
+  for (const [a, ca] of shows) {
+    for (const [b, cb] of shows) {
+      if (a === b) continue; // undirected: emit both a→b and b→a
+      out.push({
+        seedShowId: a,
+        recShowId: b,
+        weight: Math.min(ca, cb) * COMENTION_FACTOR,
         docId: doc.id,
         author: doc.author,
-        sentiment,
+        sentiment: 0,
         evidence,
       });
     }
   }
-  return [...best.values()];
+  return out;
 }
 
 function key(seed: string, rec: string): string {

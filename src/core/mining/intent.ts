@@ -15,8 +15,11 @@ const REC_INTENT = [
   /more like/,
   /similar to/,
   /if you (?:like|enjoy|love)/,
-  /recommend\w* (?:for|after|like|if)/,
-  /looking for .*(?:like|similar)/,
+  /\brecommend/,
+  /\bsuggestions?\b/,
+  /(?:best|favou?rite|top|good) podcasts?/,
+  /podcasts? (?:recommendations?|suggestions?)/,
+  /looking for .*(?:like|similar|podcast)/,
   // 中文: 类似X的播客 / 求推荐 / 有没有像…的 / 跟X差不多
   /类似/,
   /求推荐/,

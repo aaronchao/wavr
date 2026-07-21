@@ -30,6 +30,7 @@ async function main(): Promise<void> {
   // Register the sources (FK target for raw_documents), idempotent.
   await admin.from("mining_sources").upsert(
     [
+      { id: "hackernews", name: "Hacker News", lang: "en", kind: "api" },
       { id: "reddit", name: "Reddit", lang: "en", kind: "api" },
       { id: "douban", name: "豆瓣小组", lang: "zh", kind: "rss" },
     ],

@@ -1,18 +1,22 @@
 import type { RawDoc } from "@/src/core/mining";
 import { doubanSource } from "./douban";
+import { hackerNewsSource } from "./hackernews";
 import { redditSource } from "./reddit";
 import type { HarvestSource, Seed } from "./types";
 
 export type { HarvestSource, Seed } from "./types";
 export { parseRedditListing } from "./reddit";
 export { parseRssDocs } from "./douban";
+export { parseHnHits } from "./hackernews";
 
 /**
- * Wave-1 sources: Reddit (seeded, EN) + Douban (bulk, ZH). PTT / Dcard / LIHKG
- * and the promoted Xiaohongshu / Discord / Listen-Notes adapters plug in here
+ * Harvest sources. Hacker News + Reddit are seeded/EN; Douban is bulk/ZH.
+ * Hacker News uses a fully-open API (no auth, reachable from CI), so it's the
+ * reliable baseline while Reddit needs OAuth and Douban needs RSSHub. PTT /
+ * Dcard / LIHKG and the promoted Xiaohongshu / Discord adapters plug in here
  * behind the same interface as later waves land.
  */
-export const SOURCES: HarvestSource[] = [redditSource, doubanSource];
+export const SOURCES: HarvestSource[] = [hackerNewsSource, redditSource, doubanSource];
 
 /**
  * Run every source once for this seed set and return a deduped document pile.
