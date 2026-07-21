@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
 import {
+  aggregateEdges,
   aliasesForShow,
   buildGazetteer,
-  mineDocuments,
+  DEFAULT_OPTIONS,
+  extractEdges,
   normalize,
+  scan,
 } from "@/src/core/mining";
 import { getAdminSupabase } from "@/src/data/mining/admin";
 import { harvestAll, type Seed } from "@/src/data/mining/harvest";
@@ -169,9 +172,25 @@ async function main(): Promise<void> {
     if (error) console.error(`[mine] raw_documents upsert failed: ${error.message}`);
   }
 
-  // 5. Extract + aggregate → write edges.
-  const edges = mineDocuments(docs, gaz);
-  console.log(`[mine] ${edges.length} rec edges`);
+  // 5. Extract + aggregate → write edges. Bootstrapping: require just 1 author
+  // until the corpus is dense (raise MINE_MIN_AUTHORS to 2 once volume grows).
+  const minAuthors = Math.max(1, Number(process.env.MINE_MIN_AUTHORS ?? 1) || 1);
+  const opts = { ...DEFAULT_OPTIONS, minAuthors };
+
+  // Diagnostics: where does the funnel drop off — matching, or the author gate?
+  let docsWithMatch = 0;
+  let mentions = 0;
+  for (const d of docs) {
+    const n = scan(gaz, normalize(`${d.title} ${d.body}`)).length;
+    if (n > 0) docsWithMatch++;
+    mentions += n;
+  }
+  console.log(`[mine] docs naming a known show: ${docsWithMatch}/${docs.length} (${mentions} mentions)`);
+
+  const candidates = docs.flatMap((d) => extractEdges(d, gaz, opts));
+  console.log(`[mine] candidate edges (pre-gate): ${candidates.length}`);
+  const edges = aggregateEdges(candidates, opts);
+  console.log(`[mine] ${edges.length} rec edges (min ${minAuthors} author${minAuthors > 1 ? "s" : ""})`);
   if (edges.length) {
     const { error } = await admin.from("rec_edges").upsert(
       edges.map((e) => ({
