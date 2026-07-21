@@ -5,14 +5,24 @@ import { normalizeForMatch } from "./match";
  * Listen Notes — the largest free podcast search API. Its Listen Score
  * (0–100 global popularity percentile) is a strong quality signal that
  * iTunes/Podcast Index don't expose. Server-side only, key via
- * LISTEN_NOTES_API_KEY; silently absent when unset. The free plan has a
- * small monthly quota, so we query it only for finalists and cache hard.
+ * LISTEN_NOTES_API_KEY.
+ *
+ * QUOTA SAFETY: the free plan's monthly quota is tiny, and this was being
+ * called per user request across many show titles (charts / top-picks) —
+ * unbounded under traffic, with no shared counter in serverless to cap it. So
+ * it is now OFF by default and only runs when LISTEN_NOTES_ENABLED === "true".
+ * Enable it *only* in a bounded context (e.g. the daily pipeline with a hard
+ * per-run cap), never on the per-request path. Disabled → zero API calls →
+ * always within quota; recommendations fall back to the many other signals.
  */
 
 const REVALIDATE_SECONDS = 7 * 24 * 60 * 60; // Listen Score moves slowly
 const BASE = "https://listen-api.listennotes.com/api/v2";
 
 function apiKey(): string | null {
+  // Both must be present: the key AND an explicit opt-in, so it can never burn
+  // quota just by having the key configured on a traffic-serving deployment.
+  if (process.env.LISTEN_NOTES_ENABLED !== "true") return null;
   return process.env.LISTEN_NOTES_API_KEY || null;
 }
 
@@ -25,7 +35,7 @@ const normalize = normalizeForMatch;
 
 export async function listenNotesBuzz(title: string): Promise<BuzzInput | null> {
   const key = apiKey();
-  if (!key) return null; // not configured — skip, never an error
+  if (!key) return null; // not enabled/configured — skip, never an error
   try {
     const url =
       `${BASE}/search?type=podcast&only_in=title&page_size=5` +

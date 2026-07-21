@@ -55,6 +55,7 @@ describe("listenNotesBuzz", () => {
 
   it("returns the Listen Score for a title match", async () => {
     process.env.LISTEN_NOTES_API_KEY = "k";
+    process.env.LISTEN_NOTES_ENABLED = "true"; // explicit opt-in (off by default)
     mockFetch(() => ({
       body: { results: [{ title_original: "Dear Therapist", listen_score: 72 }] },
     }));
@@ -64,6 +65,7 @@ describe("listenNotesBuzz", () => {
 
   it("returns null on a 401 (never throws)", async () => {
     process.env.LISTEN_NOTES_API_KEY = "k";
+    process.env.LISTEN_NOTES_ENABLED = "true";
     mockFetch(() => ({ status: 401, body: {} }));
     const { listenNotesBuzz } = await import("@/src/data/buzz/listennotes");
     expect(await listenNotesBuzz("Dear Therapist")).toBeNull();
