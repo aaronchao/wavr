@@ -97,16 +97,25 @@ body {
   transition:
     background-color 0.15s ease,
     color 0.15s ease,
-    transform 0.1s ease;
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 0 0 0 var(--accent);
 }
+/* Delightful micro-interaction: a magnetic little glow-and-lift on hover,
+   so the Play button feels alive before you even click it. */
 .nothing-circle:hover {
   background: var(--background);
   color: var(--foreground);
+  transform: translateY(-1px) scale(1.06);
+  box-shadow: 0 0 14px 1px var(--accent);
 }
 .nothing-circle:active {
   transform: scale(0.92);
+  box-shadow: 0 0 4px 0 var(--accent);
 }
 .nothing-circle:disabled {
   opacity: 0.3;
   pointer-events: none;
+  transform: none;
+  box-shadow: none;
 }

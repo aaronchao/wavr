@@ -10,7 +10,8 @@ import {
   removeEpisode,
   saveEpisode,
 } from "@/src/data/repos/savedEpisodesRepo";
-import { Chip, SettleIn } from "@/src/ui";
+import { previewEpisode } from "@/src/features/player/preview";
+import { NothingToggle, PlayButton, SettleIn } from "@/src/ui";
 import { ShowMoreButton } from "./Charts";
 import { MachineLabel } from "./DiscoverPage";
 
@@ -123,13 +124,25 @@ function EpisodeRow({ ep, rank }: { ep: ChartEpisodeItem; rank: number }) {
         )}
         <p className="line-clamp-1 text-[11px] text-zinc-400">{ep.why}</p>
       </div>
-      <Chip
-        active={queued}
-        onClick={() => toggleLater()}
-        className="shrink-0 self-start !px-2 !py-1 !text-xs"
-      >
-        {queued ? "✓" : "+ Later"}
-      </Chip>
+      {/* Matches the "More Ranks For You" episode row: Play + Later */}
+      <div className="flex shrink-0 flex-col items-center gap-1.5">
+        <PlayButton
+          onClick={() =>
+            previewEpisode({
+              id: ep.id,
+              title: ep.title,
+              showTitle: ep.showTitle,
+              categories: [],
+              appleUrl: ep.url,
+            })
+          }
+          label={`Preview ${ep.title}`}
+          size="sm"
+        />
+        <NothingToggle active={queued} onClick={() => toggleLater()} className="!px-2">
+          {queued ? "✓" : "+ Later"}
+        </NothingToggle>
+      </div>
     </li>
   );
 }

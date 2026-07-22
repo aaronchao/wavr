@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { sortSearchShows } from "@/src/core/searchSort";
 import { searchShows } from "@/src/data/catalog/client";
 import { SearchEpisodeRow, SearchShowRow } from "@/src/features/search/rows";
 
@@ -43,6 +44,9 @@ function SearchInner() {
     enabled: term.length >= MIN_QUERY_LENGTH,
     placeholderData: (prev) => prev, // keep old results while retyping
   });
+  // relevance (exact/prefix match) first, then newest — no listen counts
+  // are available from the catalog APIs, so this is the honest ranking
+  const rankedShows = data ? sortSearchShows(data.shows, term) : [];
 
   return (
     <main className="mx-auto w-full max-w-5xl p-4 pb-40 sm:p-8 sm:pb-40">
@@ -79,11 +83,11 @@ function SearchInner() {
               Shows
             </h2>
             <ul className="flex flex-col gap-3">
-              {data.shows.slice(0, showCount).map((show) => (
+              {rankedShows.slice(0, showCount).map((show) => (
                 <SearchShowRow key={show.id} show={show} />
               ))}
             </ul>
-            {data.shows.length > showCount && (
+            {rankedShows.length > showCount && (
               <MoreButton
                 label="More shows"
                 onClick={() => setShowCount((n) => n + PAGE_SIZE)}

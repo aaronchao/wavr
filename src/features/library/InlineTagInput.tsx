@@ -25,12 +25,16 @@ export function InlineTagInput({
     if (t) onAdd(t);
   }
 
+  // defensive de-dupe: a stale cache or an in-flight rename can otherwise
+  // render the same tag name twice for a moment
+  const uniqueTags = [...new Set(tags)];
+
   return (
     <div
       className="relative z-10 mt-1.5 flex flex-wrap items-center gap-1"
       onClick={(e) => e.stopPropagation()}
     >
-      {tags.map((t) => (
+      {uniqueTags.map((t) => (
         <span
           key={t}
           className="font-brand inline-flex items-center gap-1 rounded-[2px] border border-surface-border px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-500"

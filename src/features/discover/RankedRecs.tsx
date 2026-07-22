@@ -12,11 +12,14 @@ import {
 } from "@/src/data/repos/savedEpisodesRepo";
 import { previewRankedEpisode } from "@/src/features/player/preview";
 import { NothingToggle, PlayButton, SettleIn } from "@/src/ui";
+import { ShowMoreButton } from "./Charts";
 import { MachineLabel } from "./DiscoverPage";
 import { ShowRowCompact } from "./ShowRowCompact";
 
 /** How many top shows we pull episodes from for the Episodes column. */
 const EP_SHOWS = 6;
+/** "More Ranks For You" starts collapsed to this many shows. */
+const SHOWS_CAP = 5;
 const BASIS_LABEL: Record<RankedEpisodeItem["basis"], string> = {
   listens: "Most listened",
   discussion: "Discussed",
@@ -44,6 +47,7 @@ export function RankedRecs({
   topicApplied: boolean;
   isLoading: boolean;
 }) {
+  const [showAll, setShowAll] = useState(false);
   if (isLoading) return <SkeletonRows />;
   if (count === 0) {
     return (
@@ -55,11 +59,13 @@ export function RankedRecs({
   }
   if (rest.length === 0) return null; // only the hero survived; nothing more to list
 
+  const visible = showAll ? rest : rest.slice(0, SHOWS_CAP);
+
   return (
     <section className="mb-12">
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-lg font-semibold">
-          {topicApplied ? `More in ${topic}` : "More ranked for you"}
+          {topicApplied ? `More in ${topic}` : "More Ranks For You"}
         </h2>
         <MachineLabel>{count} shows</MachineLabel>
       </div>
@@ -67,12 +73,19 @@ export function RankedRecs({
         <section>
           <ColumnLabel>Shows</ColumnLabel>
           <ol className="flex flex-col gap-2.5">
-            {rest.map((pick, i) => (
+            {visible.map((pick, i) => (
               <SettleIn key={pick.id} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
                 <ShowRowCompact show={pick} rank={i + 2} />
               </SettleIn>
             ))}
           </ol>
+          {rest.length > SHOWS_CAP && (
+            <ShowMoreButton
+              expanded={showAll}
+              hiddenCount={rest.length - SHOWS_CAP}
+              onClick={() => setShowAll((v) => !v)}
+            />
+          )}
         </section>
         <section>
           <ColumnLabel>Episodes to try</ColumnLabel>

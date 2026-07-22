@@ -22,7 +22,9 @@ export function TagEditor({ showId }: { showId: string }) {
   const [draft, setDraft] = useState("");
 
   const tagsQ = useQuery({ queryKey: ["showTags", scope], queryFn: listShowTags });
-  const tags = tagsQ.data?.[showId] ?? [];
+  // defensive de-dupe: a stale cache or an in-flight rename can otherwise
+  // render the same tag name twice for a moment
+  const tags = [...new Set(tagsQ.data?.[showId] ?? [])];
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["showTags"] });

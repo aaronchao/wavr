@@ -33,7 +33,7 @@ import { OpenInLinks } from "@/src/features/library/OpenInLinks";
 import { previewEpisode, previewShow } from "@/src/features/player/preview";
 import { FloatingSearch } from "@/src/features/search/FloatingSearch";
 import { useSession } from "@/src/state/useSession";
-import { NothingToggle, CoverTile, PlayableCard } from "@/src/ui";
+import { NothingToggle, CoverTile, PlayableCard, PlayButton } from "@/src/ui";
 
 /**
  * Library: the collection system, a single 2-column grid — Shows beside
@@ -333,11 +333,12 @@ function LibraryShowCard({
       <PlayableCard
         onPlay={() => previewShow(show)}
         playLabel={`Preview ${show.title}`}
-        className="cursor-pointer"
+        // Show identity: sharp corners, square cover — Nothing-brand.
+        className="cursor-pointer !rounded-[2px]"
       >
-        <CoverTile src={show.coverUrl} size={56} />
+        <CoverTile src={show.coverUrl} size={56} className="!rounded-[2px]" />
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 font-semibold leading-snug">
+          <p className="font-brand line-clamp-2 font-bold leading-snug">
             {linkable ? (
               <Link
                 href={`/show/${show.id}`}
@@ -468,15 +469,16 @@ function EpisodeRow({
           })
         }
         playLabel={`Preview ${episode.title}`}
-        className={`cursor-pointer ${finished ? "opacity-60" : ""}`}
+        // Episode identity: pill container, circular play — Nothing-brand.
+        className={`cursor-pointer !rounded-pill ${finished ? "opacity-60" : ""}`}
       >
-        <CoverTile src={episode.coverUrl} size={56} />
+        <CoverTile src={episode.coverUrl} size={56} className="!rounded-full" />
         <div className="min-w-0 flex-1">
           <p className={`line-clamp-2 font-semibold leading-snug ${finished ? "line-through" : ""}`}>
             {episode.title}
           </p>
           {episode.showTitle && (
-            <p className="line-clamp-1 text-sm text-zinc-500">{episode.showTitle}</p>
+            <p className="line-clamp-1 text-sm text-zinc-500 dark:text-zinc-400">{episode.showTitle}</p>
           )}
           <p className="truncate text-xs text-zinc-400">
             {finished ? "Finished" : episode.status === "in_progress" ? "In progress" : "Queued"}
@@ -494,6 +496,25 @@ function EpisodeRow({
             onRemove={(t) => void removeEpisodeTag(episode.episodeId, t).then(onTagsChanged)}
           />
         </div>
+        <PlayButton
+          onClick={(e) => {
+            e.stopPropagation();
+            previewEpisode({
+              id: episode.episodeId,
+              title: episode.title,
+              showId: episode.showId,
+              showTitle: episode.showTitle,
+              coverUrl: episode.coverUrl,
+              appleUrl: episode.appleUrl,
+              audioUrl: episode.audioUrl,
+              durationSec: episode.durationSec,
+              categories: [],
+            });
+          }}
+          label={`Preview ${episode.title}`}
+          size="sm"
+          className="relative z-10"
+        />
         <NothingToggle
           active={finished}
           onClick={(e) => {

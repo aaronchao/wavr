@@ -1,16 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { sortSearchShows } from "@/src/core/searchSort";
 import { searchShows } from "@/src/data/catalog/client";
 import { SearchEpisodeRow, SearchShowRow } from "./rows";
 
 /**
- * Global search as a floating bar fixed to the bottom of the Discovery and
- * Library views (Search is no longer a tab). Typing expands a results panel
- * upward — Shows and Episodes, each one-click save/queue — without leaving
- * the page. Sits just above the bottom tab bar and honours the mobile safe
- * area so the keyboard / home indicator never overlaps it.
+ * Global search as a floating bar fixed to the bottom of the Discovery,
+ * Library, and Show Detail views. Typing expands a results panel upward —
+ * Shows (relevance, then newest) and Episodes, each one-click save/queue —
+ * without leaving the page. Locks background scroll while open so touch
+ * scrolling only moves the results, and offers "View all results" into the
+ * dedicated /search page for a fuller view.
  */
 
 const DEBOUNCE_MS = 350;
@@ -43,6 +46,18 @@ export function FloatingSearch() {
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
 
+  // lock the background body scroll while the popup is open — only the
+  // results panel scrolls, so the page underneath never fights the touch
+  const showResults = open && term.length >= MIN_QUERY_LENGTH;
+  useEffect(() => {
+    if (!showResults) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showResults]);
+
   const { data, isFetching } = useQuery({
     queryKey: ["catalog", "search", term],
     queryFn: () => searchShows(term),
@@ -50,9 +65,10 @@ export function FloatingSearch() {
     placeholderData: (prev) => prev,
   });
 
-  const showResults = open && term.length >= MIN_QUERY_LENGTH;
-  const shows = data?.shows.slice(0, RESULT_CAP) ?? [];
+  const allShows = sortSearchShows(data?.shows ?? [], term);
+  const shows = allShows.slice(0, RESULT_CAP);
   const episodes = data?.episodes.slice(0, RESULT_CAP) ?? [];
+  const hasMore = allShows.length > RESULT_CAP || (data?.episodes.length ?? 0) > RESULT_CAP;
 
   return (
     <div
@@ -64,8 +80,9 @@ export function FloatingSearch() {
     >
       <div className="mx-auto w-full max-w-3xl">
         {showResults && (
-          // Liquid-glass search popup: translucent + blurred, subtle border
-          <div className="mb-2 max-h-[60vh] overflow-y-auto rounded-[2px] border border-white/30 bg-white/30 p-3 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-black/30">
+          // Liquid-glass search popup: translucent + blurred, subtle border.
+          // overscroll-contain + its own scroll keeps the page beneath still.
+          <div className="mb-2 max-h-[60vh] overflow-y-auto overscroll-contain rounded-[2px] border border-white/30 bg-white/30 p-3 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-black/30">
             {isFetching && shows.length === 0 && episodes.length === 0 && (
               <p className="px-1 py-3 text-sm text-zinc-400">Searching…</p>
             )}
@@ -99,11 +116,20 @@ export function FloatingSearch() {
                 </section>
               )}
             </div>
+            {(hasMore || (shows.length > 0 && episodes.length > 0)) && (
+              <Link
+                href={`/search?q=${encodeURIComponent(term)}`}
+                className="font-brand mt-3 block w-full rounded-[2px] border border-foreground bg-foreground px-4 py-2 text-center text-xs uppercase tracking-wider text-background transition-colors hover:bg-background hover:text-foreground"
+              >
+                View all results →
+              </Link>
+            )}
           </div>
         )}
 
-        {/* Liquid-glass search bar: translucent + blurred, subtle border */}
-        <div className="flex items-center gap-2 rounded-[2px] border border-white/30 bg-white/30 px-3 py-2 shadow-xl backdrop-blur-md dark:border-white/10 dark:bg-black/30">
+        {/* Liquid-glass search bar: translucent + blurred, subtle border.
+            Thicker vertical padding gives it real tap-target presence. */}
+        <div className="flex items-center gap-2 rounded-[2px] border border-white/30 bg-white/30 px-4 py-3.5 shadow-xl backdrop-blur-md dark:border-white/10 dark:bg-black/30">
           <SearchIcon className="h-4 w-4 shrink-0 text-foreground" />
           <input
             value={input}
