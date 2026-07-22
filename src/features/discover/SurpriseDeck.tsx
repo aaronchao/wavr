@@ -1,20 +1,26 @@
 "use client";
 
 import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import type { SimilarShow } from "@/src/data/catalog/types";
+import { getRankedEpisodes } from "@/src/data/catalog/client";
+import type { RankedEpisodeItem, SimilarShow } from "@/src/data/catalog/types";
 import { recordEngagement } from "@/src/data/repos/engagementRepo";
 import { saveShow } from "@/src/data/repos/savedShowsRepo";
-import { previewShowTopEpisodeMiddle } from "@/src/features/player/preview";
+import { useAutoSnippet } from "@/src/features/player/snippet";
 import { CoverTile } from "@/src/ui";
-import { Evidence } from "./Evidence";
+
+/** One "episode to try" card — a ranked episode paired with its show. */
+type TryCard = { show: SimilarShow; episode: RankedEpisodeItem };
 
 /**
- * Surprise-me — a keep-or-skip card game over the discussion-first picks.
- * Swipe (or tap ✕ / ♥) to blow through hidden gems fast; keeping saves the
- * show and teaches your taste, skipping tunes it the other way. Playful by
- * design, but fully operable with buttons under prefers-reduced-motion.
+ * Surprise-me — a swipe-only keep-or-skip game over the "episodes to try"
+ * pool. Each card auto-plays a 60-second, 1.2x community snippet on mount
+ * (client-side HTML5 Audio — no server processing) and surfaces a real
+ * community quote instead of a play/skip/keep button row: swipe right to
+ * keep the show (saves it, teaches your taste), left to skip. Fully
+ * gesture-driven; a reduced-motion viewer still keeps/skips via the header
+ * shortcut, since dragging is unavailable.
  */
 export function SurpriseDeck({
   picks,
@@ -24,13 +30,28 @@ export function SurpriseDeck({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const topShows = picks.slice(0, 8);
+  const episodeQueries = useQueries({
+    queries: topShows.map((show) => ({
+      queryKey: ["catalog", "episodes-ranked", show.id],
+      queryFn: () => getRankedEpisodes(show.id),
+      staleTime: 6 * 60 * 60 * 1000,
+    })),
+  });
+
+  // "Episode to try" pool — one ranked episode per show, paired together.
+  const cards: TryCard[] = episodeQueries
+    .map((q, i) => ({ show: topShows[i], episode: q.data?.[0] }))
+    .filter((c): c is TryCard => Boolean(c.episode));
+
   const [index, setIndex] = useState(0);
   const [kept, setKept] = useState(0);
-  const current = picks[index];
-  const next = picks[index + 1];
+  const current = cards[index];
+  const next = cards[index + 1];
+  const loading = episodeQueries.some((q) => q.isLoading) && cards.length === 0;
 
   function decide(dir: "keep" | "skip") {
-    const show = picks[index];
+    const show = cards[index]?.show;
     if (!show) return;
     if (dir === "keep") {
       void saveShow(show);
@@ -60,10 +81,14 @@ export function SurpriseDeck({
       </div>
 
       <div className="relative h-[26rem] w-full max-w-sm">
-        {current ? (
+        {loading ? (
+          <div className="flex h-full items-center justify-center rounded-card border border-surface-border bg-background">
+            <p className="text-sm text-zinc-400">Finding episodes to try…</p>
+          </div>
+        ) : current ? (
           <>
-            {next && <PeekCard key={next.id} show={next} />}
-            <SwipeCard key={current.id} show={current} onDecide={decide} />
+            {next && <PeekCard key={`${next.show.id}:${next.episode.id}`} card={next} />}
+            <SwipeCard key={`${current.show.id}:${current.episode.id}`} card={current} onDecide={decide} />
           </>
         ) : (
           <div className="flex h-full flex-col items-center justify-center rounded-card border border-surface-border bg-background p-6 text-center">
@@ -81,33 +106,23 @@ export function SurpriseDeck({
           </div>
         )}
       </div>
-
-      {current && (
-        <div className="mt-5 flex items-center gap-5">
-          <DeckButton label="Skip" onClick={() => decide("skip")}>
-            ✕
-          </DeckButton>
-          <button
-            type="button"
-            onClick={() => previewShowTopEpisodeMiddle(current)}
-            className="rounded-full bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm active:scale-95"
-          >
-            ▶ Play
-          </button>
-          <DeckButton label="Keep" accent onClick={() => decide("keep")}>
-            ♥
-          </DeckButton>
-        </div>
-      )}
     </div>
   );
 }
 
+/** The real community line behind a pick — evidence when we have it, the
+ *  episode's own "why" (also straight from the payload) when we don't. */
+function quoteFor(card: TryCard): { quote: string; communityUsername: string } {
+  const evidence = card.show.evidence?.[0];
+  if (evidence) return { quote: evidence.text, communityUsername: evidence.source };
+  return { quote: card.episode.why, communityUsername: card.show.why || "the community" };
+}
+
 function SwipeCard({
-  show,
+  card,
   onDecide,
 }: {
-  show: SimilarShow;
+  card: TryCard;
   onDecide: (dir: "keep" | "skip") => void;
 }) {
   const reduce = useReducedMotion();
@@ -115,6 +130,10 @@ function SwipeCard({
   const rotate = useTransform(x, [-220, 220], [-14, 14]);
   const keep = useTransform(x, [30, 130], [0, 1]);
   const skip = useTransform(x, [-130, -30], [1, 0]);
+  const { quote, communityUsername } = quoteFor(card);
+
+  // Auto-play the 60s/1.2x community snippet the moment this card mounts.
+  useAutoSnippet(card.episode.audioUrl);
 
   return (
     <motion.div
@@ -146,10 +165,15 @@ function SwipeCard({
           </motion.span>
         </>
       )}
-      <CoverTile src={show.coverUrl} size={120} className="!h-40 !w-full !rounded-tile" />
-      <h3 className="mt-4 text-xl font-bold leading-tight">{show.title}</h3>
-      <p className="text-sm text-zinc-500">{show.author}</p>
-      <Evidence show={show} className="mt-3" />
+      <CoverTile src={card.show.coverUrl} size={120} className="!h-40 !w-full !rounded-tile" />
+      <h3 className="mt-4 text-xl font-bold leading-tight">{card.show.title}</h3>
+      <p className="text-sm text-zinc-500">{card.episode.title}</p>
+      <blockquote className="mt-3 border-l-2 border-accent-soft pl-3 text-sm italic text-foreground/80">
+        “{quote}”
+      </blockquote>
+      <p className="font-brand mt-1 text-[11px] uppercase tracking-wider text-accent">
+        — {communityUsername}
+      </p>
       <p className="mt-auto pt-3 text-center font-brand text-[10px] uppercase tracking-[0.18em] text-zinc-400">
         Swipe → keep · ← skip
       </p>
@@ -158,38 +182,11 @@ function SwipeCard({
 }
 
 /** A dimmed peek of the next card behind the active one. */
-function PeekCard({ show }: { show: SimilarShow }) {
+function PeekCard({ card }: { card: TryCard }) {
   return (
     <div className="absolute inset-0 scale-95 rounded-card border border-surface-border bg-surface/60 p-5 opacity-60">
-      <CoverTile src={show.coverUrl} size={120} className="!h-40 !w-full !rounded-tile" />
-      <h3 className="mt-4 truncate text-xl font-bold">{show.title}</h3>
+      <CoverTile src={card.show.coverUrl} size={120} className="!h-40 !w-full !rounded-tile" />
+      <h3 className="mt-4 truncate text-xl font-bold">{card.show.title}</h3>
     </div>
-  );
-}
-
-function DeckButton({
-  children,
-  label,
-  accent = false,
-  onClick,
-}: {
-  children: React.ReactNode;
-  label: string;
-  accent?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={`flex h-14 w-14 items-center justify-center rounded-full border text-xl shadow-sm transition-transform active:scale-90 ${
-        accent
-          ? "border-accent bg-accent-soft text-accent"
-          : "border-surface-border bg-background text-zinc-500"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

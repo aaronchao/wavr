@@ -46,7 +46,7 @@ export function SearchEpisodeRow({ episode }: { episode: CatalogEpisode }) {
       >
         <CoverTile src={episode.coverUrl} size={56} />
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 font-semibold leading-snug">{episode.title}</p>
+          <p className="line-clamp-3 font-semibold leading-snug">{episode.title}</p>
           {episode.showTitle &&
             (episode.showId ? (
               <Link
@@ -66,9 +66,12 @@ export function SearchEpisodeRow({ episode }: { episode: CatalogEpisode }) {
             e.stopPropagation();
             toggleLater();
           }}
+          // aria-label keeps the accessible name stable for tests/screen
+          // readers even though the visible label is now icon-only.
+          ariaLabel={queued ? "Queued ✓" : "+ Later"}
           className="relative z-10 shrink-0"
         >
-          {queued ? "Queued ✓" : "+ Later"}
+          {queued ? "✓" : "+"}
         </NothingToggle>
       </PlayableCard>
     </li>
@@ -122,9 +125,10 @@ export function SearchShowRow({ show }: { show: CatalogShow }) {
             e.stopPropagation();
             toggleSave();
           }}
+          ariaLabel={saved ? "Saved ✓" : "Save"}
           className="relative z-10 shrink-0"
         >
-          {saved ? "Saved ✓" : "Save"}
+          {saved ? "✓" : "+"}
         </NothingToggle>
       </PlayableCard>
     </li>

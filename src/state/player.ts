@@ -23,6 +23,8 @@ export type PreviewMeta = {
   feedUrl?: string;
   /** Stored player deep-links — brand-coloured icons in the Play bar. */
   platformLinks?: PlatformLinks;
+  /** The show's catalog id, when known — lets the Play bar link to its page. */
+  showId?: string;
 };
 
 export type PlayerState = {

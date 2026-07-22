@@ -12,7 +12,6 @@ import { EpisodeCharts } from "./EpisodeCharts";
 import { RankedRecs } from "./RankedRecs";
 import { SavedRails } from "./SavedRails";
 import { SurpriseDeck } from "./SurpriseDeck";
-import { TodaysPicks } from "./TodaysPicks";
 import { TrendingShelf } from "./TrendingShelf";
 import { useDiscoverPicks } from "./useDiscoverPicks";
 
@@ -43,8 +42,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 /** Quick-start lenses when the user hasn't added interests yet — no API
- *  call, no trending fetch, just three broad always-relevant topics. */
-const FALLBACK_INTERESTS = ["Tech", "Comedy", "True Crime"];
+ *  call, no trending fetch. Unmounted the moment a personal tag is added. */
+const FALLBACK_INTERESTS = ["墨尔本", "奥德赛", "claude"];
 
 /**
  * Discover: the ranked, discussion-first exploration surface — and now
@@ -86,26 +85,21 @@ export function DiscoverPage() {
     <main className="mx-auto w-full max-w-3xl px-4 pb-44 pt-6 sm:px-8">
       {deckOpen && <SurpriseDeck picks={heroPicks} onClose={() => setDeckOpen(false)} />}
 
-      {/* Masthead — witty copy + inline account sync, no separate Settings trip */}
-      <div className="mb-8 border-b border-surface-border pb-6">
+      {/* Masthead — compact so "For You" clears the fold on mobile */}
+      <div className="mb-4 border-b border-surface-border pb-3">
         <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
           <MachineLabel>wavefm · Discovery Engine</MachineLabel>
         </div>
-        <h1 className="font-brand mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
+        <h1 className="font-brand mt-1 text-xl font-bold tracking-tight sm:text-2xl">
           Your next favorite show is hiding in here.
         </h1>
-        <p className="mt-2 max-w-lg text-zinc-500">
-          Rankings sourced from actual arguments people are having online —{" "}
-          <span className="text-foreground">Reddit · 豆瓣 · V2EX · PTT · Dcard · LIHKG · 小宇宙</span>
-          , not the charts. One tap plays the bit they&apos;re fighting about.
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => setDeckOpen(true)}
             disabled={heroPicks.length === 0}
-            className="font-brand rounded-pill bg-accent px-5 py-2.5 text-sm uppercase tracking-wider text-white shadow-sm transition-transform hover:shadow-md active:scale-95 disabled:opacity-40"
+            className="font-brand rounded-pill bg-accent px-4 py-2 text-xs uppercase tracking-wider text-white shadow-sm transition-transform hover:shadow-md active:scale-95 disabled:opacity-40"
           >
             ⤮ Surprise me
           </button>
@@ -133,12 +127,10 @@ export function DiscoverPage() {
       {/* Trending — sits right under For You, no repeat heading */}
       <TrendingShelf topic={topic} hideTitle />
 
-      {/* Today's Pick — swipe right to save, left to skip */}
-      <TodaysPicks key={topic ?? "all"} picks={heroPicks} />
-
-      {/* More Ranks For You — capped, "Show more" underneath */}
+      {/* More Ranks For You — the full ranked list (#1 included, since
+          Today's Pick no longer spotlights it separately), capped + "Show more" */}
       <RankedRecs
-        rest={picks.rest}
+        picks={heroPicks}
         count={picks.count}
         topic={topic}
         topicApplied={picks.topicApplied}
@@ -214,32 +206,19 @@ function InlineSync() {
   );
 }
 
-/** Low-friction inline add for a new "For You" interest. */
+/** Low-friction inline add for a new "For You" interest — always one tap
+ *  (type + Enter), no extra click to reveal the field. */
 function InlineAddChip({ onAdd }: { onAdd: (t: string) => void }) {
   const [draft, setDraft] = useState("");
-  const [open, setOpen] = useState(false);
 
   function commit() {
     const t = draft.trim();
     setDraft("");
-    setOpen(false);
     if (t) onAdd(t);
   }
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="nothing-toggle shrink-0 whitespace-nowrap px-3 py-1.5 text-[11px]"
-      >
-        + Add
-      </button>
-    );
-  }
   return (
     <input
-      autoFocus
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onKeyDown={(e) => {
@@ -249,11 +228,10 @@ function InlineAddChip({ onAdd }: { onAdd: (t: string) => void }) {
         }
         if (e.key === "Escape") {
           setDraft("");
-          setOpen(false);
         }
       }}
       onBlur={commit}
-      placeholder="your interest…"
+      placeholder="Add an interest…"
       aria-label="Add an interest"
       className="font-brand w-32 shrink-0 rounded-[2px] border border-dashed border-surface-border bg-transparent px-2.5 py-1.5 text-[11px] uppercase tracking-wider text-foreground placeholder:text-zinc-400 focus:border-foreground focus:outline-none"
     />

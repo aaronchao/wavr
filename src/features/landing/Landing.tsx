@@ -59,7 +59,7 @@ export function Landing() {
               Explore discovery →
             </Link>
             <Link
-              href="/settings"
+              href="/"
               className="rounded-pill border border-surface-border bg-surface px-6 py-3 text-sm font-medium transition-colors hover:text-foreground"
             >
               Sign in to sync

@@ -79,8 +79,12 @@ function ShowDetail({ show }: { show: CatalogShow }) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <NothingToggle active={saved} onClick={toggleSave}>
-          {saved ? "Saved ✓" : "Save"}
+        <NothingToggle
+          active={saved}
+          onClick={toggleSave}
+          ariaLabel={saved ? "Saved ✓" : "Save"}
+        >
+          {saved ? "✓" : "+"}
         </NothingToggle>
       </div>
 

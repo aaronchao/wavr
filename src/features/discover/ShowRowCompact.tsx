@@ -47,8 +47,13 @@ export function ShowRowCompact({
           label={`Play the most-discussed bit of ${show.title}`}
           size="sm"
         />
-        <NothingToggle active={saved.saved} onClick={saved.toggle} className="!px-2">
-          {saved.saved ? "✓" : "Save"}
+        <NothingToggle
+          active={saved.saved}
+          onClick={saved.toggle}
+          ariaLabel={saved.saved ? "Saved ✓" : "Save"}
+          className="!px-2"
+        >
+          {saved.saved ? "✓" : "+"}
         </NothingToggle>
       </div>
     </li>

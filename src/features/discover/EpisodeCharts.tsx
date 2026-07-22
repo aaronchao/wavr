@@ -10,8 +10,8 @@ import {
   removeEpisode,
   saveEpisode,
 } from "@/src/data/repos/savedEpisodesRepo";
-import { previewEpisode } from "@/src/features/player/preview";
-import { NothingToggle, PlayButton, SettleIn } from "@/src/ui";
+import { CoverPlay } from "@/src/features/player/CoverPlay";
+import { NothingToggle, SettleIn } from "@/src/ui";
 import { ShowMoreButton } from "./Charts";
 import { MachineLabel } from "./DiscoverPage";
 
@@ -106,8 +106,10 @@ function EpisodeRow({ ep, rank }: { ep: ChartEpisodeItem; rank: number }) {
       <span className="font-brand mt-0.5 w-6 shrink-0 text-center text-sm font-bold tabular-nums text-zinc-400 dark:text-zinc-500">
         {String(rank).padStart(2, "0")}
       </span>
+      {/* Matches the "More Ranks For You" episode row: cover + play triangle */}
+      <CoverPlay size={48} label={`Play a snippet of ${ep.title}`} />
       <div className="min-w-0 flex-1">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug">{ep.title}</p>
+        <p className="line-clamp-3 text-sm font-semibold leading-snug">{ep.title}</p>
         {ep.showTitle && (
           <Link
             href={`/search?q=${encodeURIComponent(ep.showTitle)}`}
@@ -124,25 +126,14 @@ function EpisodeRow({ ep, rank }: { ep: ChartEpisodeItem; rank: number }) {
         )}
         <p className="line-clamp-1 text-[11px] text-zinc-400">{ep.why}</p>
       </div>
-      {/* Matches the "More Ranks For You" episode row: Play + Later */}
-      <div className="flex shrink-0 flex-col items-center gap-1.5">
-        <PlayButton
-          onClick={() =>
-            previewEpisode({
-              id: ep.id,
-              title: ep.title,
-              showTitle: ep.showTitle,
-              categories: [],
-              appleUrl: ep.url,
-            })
-          }
-          label={`Preview ${ep.title}`}
-          size="sm"
-        />
-        <NothingToggle active={queued} onClick={() => toggleLater()} className="!px-2">
-          {queued ? "✓" : "+ Later"}
-        </NothingToggle>
-      </div>
+      <NothingToggle
+        active={queued}
+        onClick={() => toggleLater()}
+        ariaLabel={queued ? "Queued" : "Save for later"}
+        className="shrink-0 !px-2"
+      >
+        {queued ? "✓" : "+"}
+      </NothingToggle>
     </li>
   );
 }

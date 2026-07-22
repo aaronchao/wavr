@@ -123,7 +123,7 @@ function TopEpisodeRow({
         {String(rank).padStart(2, "0")}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{ep.title}</p>
+        <p className="line-clamp-3 text-sm font-medium">{ep.title}</p>
         <p className="truncate text-[11px] text-zinc-400">
           <span
             className={`font-mono uppercase tracking-wider ${
@@ -141,7 +141,7 @@ function TopEpisodeRow({
         ariaLabel={queued ? `Remove ${ep.title} from Later` : `Save ${ep.title} for later`}
         className="shrink-0"
       >
-        {queued ? "✓ Later" : "+ Later"}
+        {queued ? "✓" : "+"}
       </NothingToggle>
       <PlayButton
         onClick={() => previewRankedEpisode(ep, show)}

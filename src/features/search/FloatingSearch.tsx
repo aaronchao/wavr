@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { sortSearchShows } from "@/src/core/searchSort";
 import { searchShows } from "@/src/data/catalog/client";
+import { usePlayerState } from "@/src/state/player";
 import { SearchEpisodeRow, SearchShowRow } from "./rows";
 
 /**
@@ -70,13 +71,21 @@ export function FloatingSearch() {
   const episodes = data?.episodes.slice(0, RESULT_CAP) ?? [];
   const hasMore = allShows.length > RESULT_CAP || (data?.episodes.length ?? 0) > RESULT_CAP;
 
+  // The Play bar (when visible) sits just above the tab bar and is tall
+  // enough to physically overlap this bar's old fixed position — not just a
+  // z-index fight. Lift the whole search bar clear above it instead.
+  const playerVisible = usePlayerState().status !== "idle";
+  const bottomOffset = playerVisible
+    ? "calc(env(safe-area-inset-bottom) + 12.5rem)"
+    : "calc(env(safe-area-inset-bottom) + 3.5rem)";
+
   return (
     <div
       ref={rootRef}
       // Strictly above the Play bar (z-[45]) and tab bar (z-40) in the
       // stack — the floating Search bar always wins visually.
-      className="fixed inset-x-0 z-50 px-4 sm:px-8"
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 3.5rem)" }}
+      className="fixed inset-x-0 z-50 px-4 transition-[bottom] duration-200 sm:px-8"
+      style={{ bottom: bottomOffset }}
     >
       <div className="mx-auto w-full max-w-3xl">
         {showResults && (

@@ -97,9 +97,9 @@ test("topics lead with trending; personal niche seeds are absent", async ({ page
   await expect(page.getByText("Asian gay podcasts")).toHaveCount(0);
 });
 
-test("settings offers custom interests, no personal seeds", async ({ page }) => {
+test("Discover offers custom interests inline, no personal seeds", async ({ page }) => {
   await stub(page);
-  await page.goto("/settings");
+  await page.goto("/");
   await expect(page.getByPlaceholder(/Add an interest/)).toBeVisible();
   await expect(page.getByText("Asian gay podcasts")).toHaveCount(0);
 });
@@ -158,7 +158,7 @@ test("the marketing landing (/welcome) greets visitors with a discovery CTA", as
   await expect(page.getByText("Your feed, poured out")).toBeVisible();
 });
 
-test("discover ranks recommendations and opens a show's episodes", async ({ page }) => {
+test("discover ranks recommendations and surfaces evidence for its picks", async ({ page }) => {
   const RANKED_PICKS = {
     picks: [
       show("222", "Psychology In Seattle", "Kirk Honda", ["Mental Health"], {
@@ -194,16 +194,12 @@ test("discover ranks recommendations and opens a show's episodes", async ({ page
   await page.route("**/api/catalog/episodes-ranked**", (r) => r.fulfill({ json: RANKED_EPS }));
 
   await page.goto("/");
-  // spotlight (#1) and a further pick (#2) are present, in order
-  await expect(page.getByRole("heading", { name: "Psychology In Seattle" })).toBeVisible();
+  // #1 and #2 both land in the ranked list, in order (Today's Pick no
+  // longer spotlights #1 separately — this is the only place it appears)
+  await expect(page.getByText("Psychology In Seattle").first()).toBeVisible();
   await expect(page.getByText("Where Should We Begin").first()).toBeVisible();
-  await expect(page.getByText("Play the talked-about bit")).toBeVisible();
-
-  // opening a show reveals its discussion-first episode ranking (the same
-  // episodes also seed the side-by-side Episodes column, so scope to the first)
-  await page.getByRole("button", { name: /Top episodes/ }).first().click();
+  // its ranked episode surfaces in the "Episodes to try" column
   await expect(page.getByText("The one everyone argues about").first()).toBeVisible();
-  await expect(page.getByText("Most discussed · 40 Reddit threads").first()).toBeVisible();
 
   // tapping the reason badge expands the real community thread behind it
   await page.getByRole("button", { name: /Talked about on Reddit/ }).first().click();
@@ -212,11 +208,18 @@ test("discover ranks recommendations and opens a show's episodes", async ({ page
   ).toBeVisible();
 });
 
-test("Surprise-me deck lets you keep a show", async ({ page }) => {
+test("Surprise-me deck shows a community quote and lets you keep a show", async ({ page }) => {
   const RANKED_PICKS = {
     picks: [
       show("222", "Psychology In Seattle", "Kirk Honda", ["Mental Health"], {
         why: "Talked about on Reddit (12 threads)",
+        evidence: [
+          {
+            source: "r/podcasts",
+            text: "Changed how I think about relationships",
+            url: "https://www.reddit.com/r/podcasts/x",
+          },
+        ],
       }),
       show("333", "Where Should We Begin", "Esther Perel", ["Society & Culture"], {
         why: "Under the radar · Discussed on V2EX (4 threads)",
@@ -225,12 +228,42 @@ test("Surprise-me deck lets you keep a show", async ({ page }) => {
     degraded: false,
   };
   await stub(page, { topPicks: RANKED_PICKS });
+  // cards are sourced from "episodes to try", not the shows directly
+  await page.route("**/api/catalog/episodes-ranked**", (r) =>
+    r.fulfill({
+      json: {
+        episodes: [
+          {
+            id: "ep-x",
+            title: "The one everyone argues about",
+            audioUrl: "https://cdn/ep1.mp3",
+            durationSec: 2400,
+            basis: "discussion",
+            why: "Most discussed · 40 Reddit threads",
+          },
+        ],
+        degraded: false,
+      },
+    }),
+  );
 
   await page.goto("/");
   await page.getByRole("button", { name: /Surprise me/ }).first().click();
   await expect(page.getByText("Swipe → keep · ← skip")).toBeVisible();
+  // a real community quote replaces the old skip/play/keep button row
+  await expect(page.getByText("Changed how I think about relationships")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Keep" })).toHaveCount(0);
+
+  // swipe the top card right (drag gesture) to keep it
+  const card = page.getByText("Swipe → keep · ← skip").locator("..");
+  const box = await card.boundingBox();
+  if (box) {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 260, box.y + box.height / 2, { steps: 12 });
+    await page.mouse.up();
+  }
   // keep it -> the "Done · 1 saved" counter reflects the save
-  await page.getByRole("button", { name: "Keep" }).click();
   await expect(page.getByText(/1 saved/)).toBeVisible();
 });
 

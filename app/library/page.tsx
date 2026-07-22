@@ -30,10 +30,11 @@ import { ExportOpmlButton } from "@/src/features/library/ExportOpmlButton";
 import { ImportOpmlButton } from "@/src/features/library/ImportOpmlButton";
 import { InlineTagInput } from "@/src/features/library/InlineTagInput";
 import { OpenInLinks } from "@/src/features/library/OpenInLinks";
+import { CoverPlay } from "@/src/features/player/CoverPlay";
 import { previewEpisode, previewShow } from "@/src/features/player/preview";
 import { FloatingSearch } from "@/src/features/search/FloatingSearch";
 import { useSession } from "@/src/state/useSession";
-import { NothingToggle, CoverTile, PlayableCard, PlayButton } from "@/src/ui";
+import { NothingToggle, CoverTile, PlayableCard } from "@/src/ui";
 
 /**
  * Library: the collection system, a single 2-column grid — Shows beside
@@ -472,9 +473,15 @@ function EpisodeRow({
         // Episode identity: pill container, circular play — Nothing-brand.
         className={`cursor-pointer !rounded-pill ${finished ? "opacity-60" : ""}`}
       >
-        <CoverTile src={episode.coverUrl} size={56} className="!rounded-full" />
+        <CoverPlay
+          src={episode.coverUrl}
+          size={56}
+          audioUrl={episode.audioUrl}
+          label={`Play a snippet of ${episode.title}`}
+          className="relative z-10 !rounded-full"
+        />
         <div className="min-w-0 flex-1">
-          <p className={`line-clamp-2 font-semibold leading-snug ${finished ? "line-through" : ""}`}>
+          <p className={`line-clamp-3 font-semibold leading-snug ${finished ? "line-through" : ""}`}>
             {episode.title}
           </p>
           {episode.showTitle && (
@@ -496,25 +503,6 @@ function EpisodeRow({
             onRemove={(t) => void removeEpisodeTag(episode.episodeId, t).then(onTagsChanged)}
           />
         </div>
-        <PlayButton
-          onClick={(e) => {
-            e.stopPropagation();
-            previewEpisode({
-              id: episode.episodeId,
-              title: episode.title,
-              showId: episode.showId,
-              showTitle: episode.showTitle,
-              coverUrl: episode.coverUrl,
-              appleUrl: episode.appleUrl,
-              audioUrl: episode.audioUrl,
-              durationSec: episode.durationSec,
-              categories: [],
-            });
-          }}
-          label={`Preview ${episode.title}`}
-          size="sm"
-          className="relative z-10"
-        />
         <NothingToggle
           active={finished}
           onClick={(e) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CLIP_SECONDS } from "@/src/core/preview";
 import { OpenInLinks } from "@/src/features/library/OpenInLinks";
@@ -156,14 +157,27 @@ export function PreviewPlayer() {
           >
             <div className="mx-auto flex max-w-2xl flex-col gap-2 p-3 sm:px-8">
               <div className="flex items-center gap-3">
-                <CoverTile src={s.meta.coverUrl} size={44} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">
-                    {s.status === "playing" && "▶ "}
-                    {s.meta.title}
-                  </p>
-                  <p className="truncate text-xs text-zinc-500">{statusLine}</p>
-                </div>
+                {/* Cover + text route to the show's page when we know its id */}
+                {s.meta.showId ? (
+                  <Link
+                    href={`/show/${s.meta.showId}`}
+                    className="flex min-w-0 flex-1 items-center gap-3"
+                  >
+                    <CoverTile src={s.meta.coverUrl} size={44} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold hover:underline">{s.meta.title}</p>
+                      <p className="truncate text-xs text-zinc-500">{statusLine}</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <CoverTile src={s.meta.coverUrl} size={44} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{s.meta.title}</p>
+                      <p className="truncate text-xs text-zinc-500">{statusLine}</p>
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={() => player.dismiss()}
                   aria-label="Close preview"

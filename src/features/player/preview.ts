@@ -29,6 +29,7 @@ export function previewShow(
     appleUrl: show.appleUrl,
     feedUrl: show.feedUrl,
     platformLinks: show.platformLinks,
+    showId: show.id,
   };
   player.startLoading(meta);
   // rss- shows aren't in any catalog — their feed URL rides along
@@ -62,6 +63,7 @@ export function previewShowTopEpisodeMiddle(
     appleUrl: show.appleUrl,
     feedUrl: show.feedUrl,
     platformLinks: show.platformLinks,
+    showId: show.id,
   };
   player.startLoading(meta);
   void getRankedEpisodes(show.id).then((eps) => {
@@ -74,7 +76,7 @@ export function previewShowTopEpisodeMiddle(
 /** Play a random middle section of one already-ranked episode. */
 export function previewRankedEpisode(
   item: RankedEpisodeItem,
-  show: Pick<CatalogShow, "title" | "coverUrl" | "appleUrl" | "feedUrl" | "platformLinks">,
+  show: Pick<CatalogShow, "id" | "title" | "coverUrl" | "appleUrl" | "feedUrl" | "platformLinks">,
 ) {
   const meta: PreviewMeta = {
     title: item.title,
@@ -84,6 +86,7 @@ export function previewRankedEpisode(
     appleUrl: show.appleUrl,
     feedUrl: show.feedUrl,
     platformLinks: show.platformLinks,
+    showId: show.id,
   };
   if (!item.audioUrl) return player.fail(meta);
   playMiddle(meta, item);
@@ -104,6 +107,7 @@ export function previewEpisode(episode: CatalogEpisode) {
     coverUrl: episode.coverUrl,
     searchTitle: episode.title,
     appleUrl: episode.appleUrl,
+    showId: episode.showId,
   };
   if (episode.audioUrl) {
     player.play(meta, episode.audioUrl, clipStart(episode.durationSec, Math.random()));
